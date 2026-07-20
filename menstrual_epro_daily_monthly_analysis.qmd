@@ -1,0 +1,2810 @@
+---
+title: "Daily and monthly menstrual bleeding and pain ePRO results"
+format:
+  html:
+    theme: default
+    page-layout: full
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    code-summary: "Show R code"
+    embed-resources: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{=html}
+<style>
+.bodymap-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: .8rem;
+  margin: 0 0 1rem;
+}
+
+.bodymap-stat {
+  padding: .85rem 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: .7rem;
+  background: var(--bs-tertiary-bg);
+}
+
+.bodymap-stat-label {
+  color: var(--bs-secondary-color);
+  font-size: .85rem;
+  margin-bottom: .15rem;
+}
+
+.bodymap-stat-value {
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.bodymap-frame {
+  position: relative;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.bodymap-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+}
+
+.bodymap-region {
+  transition: filter 120ms ease, stroke-width 120ms ease;
+}
+
+.bodymap-region:hover {
+  filter: brightness(.9) saturate(1.08);
+  stroke: #173f40 !important;
+  stroke-width: 1.5px !important;
+}
+
+.bodymap-region:focus {
+  outline: none;
+  filter: brightness(.9) saturate(1.08);
+  stroke: #173f40 !important;
+  stroke-width: 2px !important;
+}
+
+.bodymap-hover {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+}
+
+.bodymap-hover.is-visible {
+  display: block;
+  opacity: 1;
+}
+
+.bodymap-legend {
+  max-width: 560px;
+  margin: .8rem auto 1.5rem;
+}
+
+.bodymap-gradient {
+  height: .8rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f1f6f5, #b8ddda, #61b9b2, #167c77, #064743);
+}
+
+.bodymap-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--bs-secondary-color);
+  font-size: .82rem;
+  margin-top: .25rem;
+}
+
+.bodymap-note {
+  color: var(--bs-secondary-color);
+  text-align: center;
+  margin: .35rem 0 1rem;
+}
+
+.bodymap-warning {
+  border-left: 4px solid #c97a15;
+  background: var(--bs-warning-bg-subtle);
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+}
+
+.bodymap-table-scroll {
+  max-height: 24rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--bs-border-color);
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.bodymap-table-scroll table {
+  margin-bottom: 0;
+}
+
+.bodymap-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bs-body-bg);
+}
+</style>
+```
+
+```{r}
+#| label: setup
+
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+library(xml2)
+library(htmltools)
+library(scales)
+library(knitr)
+library(ggplot2)
+library(yaml)
+
+config_file <- "analysis_config.yml"
+stopifnot(file.exists(config_file))
+config <- read_yaml(config_file)
+
+daily_data_file <- config$files$daily_data
+monthly_data_file <- config$files$monthly_data
+svg_file <- config$files$bodymap_svg
+
+participant_id_source_field <- config$fields$participant_id
+programme_start_source_field <- config$fields$programme_start_date
+report_date_source_field <- config$fields$report_date
+reference_month_source_field <- config$fields$reference_month
+location_source_field <- config$fields$pain_locations
+location_field <- "pain_locations_yesterday"
+
+map_title <- config$bodymap$symmetric_title
+detailed_map_title <- config$bodymap$detailed_title
+top_n <- config$bodymap$top_regions_table
+top_timing_region_n <- config$bodymap$top_regions_timing
+
+spotting_starts_cycle <- config$cycle_inference$spotting_starts_cycle
+require_next_day_blood <- config$cycle_inference$require_next_day_blood
+minimum_cycle_gap_days <- config$cycle_inference$minimum_days_between_onsets
+long_cycle_review_days <- config$cycle_inference$long_cycle_review_days
+bleed_free_days_between_episodes <- config$cycle_inference$bleed_free_days_between_episodes
+stopifnot(bleed_free_days_between_episodes %in% c(1, 2))
+
+cycles_to_display <- config$display$programme_cycles
+cycle_days_to_display <- config$display$cycle_days
+programme_months_to_display <- config$display$programme_months
+
+bootstrap_replicates <- config$uncertainty$bootstrap_replicates
+confidence_level <- config$uncertainty$confidence_level
+uncertainty_seed <- config$uncertainty$random_seed
+set.seed(uncertainty_seed)
+```
+
+```{r}
+#| label: calculate-results
+
+stopifnot(file.exists(daily_data_file), file.exists(monthly_data_file), file.exists(svg_file))
+
+# Find genuine bilateral pairs in the SVG. A region is combined only when both
+# an exact _Left and _Right version exist; unmatched names remain separate.
+svg_id_scan <- read_xml(svg_file) |>
+  xml_find_all("//*[@id]") |>
+  xml_attr("id")
+
+left_bases <- svg_id_scan[str_detect(svg_id_scan, "_Left$")] |>
+  str_remove("_Left$")
+right_bases <- svg_id_scan[str_detect(svg_id_scan, "_Right$")] |>
+  str_remove("_Right$")
+paired_bases <- intersect(left_bases, right_bases)
+
+combine_sides <- function(region) {
+  base <- str_remove(region, "_(?:Left|Right)$")
+  if_else(region != base & base %in% paired_bases, base, region)
+}
+
+# Hands and feet ignore both side and body surface. Arms retain their
+# upper/mid/fore subdivision, and legs retain their upper/lower subdivision,
+# while also ignoring side and dorsal/ventral surface.
+combine_regions <- function(region) {
+  side_combined <- combine_sides(region)
+
+  case_when(
+    str_detect(region, "^(?:Dorsal_Foot_Ankle|Ventral_Foot)_(?:Left|Right)$") ~ "Foot",
+    str_detect(region, "^(?:Dorsal|Ventral)_Hand_(?:Left|Right)$") ~ "Hand",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Fore_(?:Left|Right)$") ~ "Arm_Fore",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Mid_(?:Left|Right)$") ~ "Arm_Mid",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Upper_(?:Left|Right)$") ~ "Arm_Upper",
+    str_detect(region, "^(?:Dorsal|Ventral)_Leg_Lower_(?:Left|Right)$") ~ "Leg_Lower",
+    str_detect(region, "^(?:Dorsal|Ventral)_Leg_Upper_(?:Left|Right)$") ~ "Leg_Upper",
+    TRUE ~ side_combined
+  )
+}
+
+drawable_id_scan <- read_xml(svg_file) |>
+  xml_find_all(
+    "//*[@id and (self::*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'] or ./*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'])]"
+  ) |>
+  xml_attr("id") |>
+  unique()
+
+all_detailed_regions <- drawable_id_scan
+all_symmetric_regions <- unique(combine_regions(drawable_id_scan))
+
+daily_data <- read_csv(daily_data_file, show_col_types = FALSE) |>
+  rename(
+    participant_id = all_of(participant_id_source_field),
+    programme_start_date = all_of(programme_start_source_field),
+    report_date = all_of(report_date_source_field),
+    pain_locations_yesterday = all_of(location_source_field)
+  ) |>
+  mutate(
+    report_date = as.Date(report_date),
+    programme_start_date = as.Date(programme_start_date),
+    days_since_contraceptive_start = as.integer(report_date - programme_start_date)
+  )
+monthly_data <- read_csv(monthly_data_file, show_col_types = FALSE) |>
+  rename(
+    participant_id = all_of(participant_id_source_field),
+    programme_start_date = all_of(programme_start_source_field),
+    reference_month = all_of(reference_month_source_field)
+  ) |>
+  mutate(programme_start_date = as.Date(programme_start_date))
+
+required_daily_fields <- c(
+  "participant_id",
+  "programme_start_date",
+  "report_date",
+  "menstrual_bleeding_yesterday",
+  "bleeding_expected_yesterday",
+  "bleeding_amount_yesterday",
+  "bleeding_amount_expected_yesterday",
+  "menstrual_pain_yesterday",
+  "pain_expected_yesterday",
+  "pain_amount_yesterday",
+  "pain_amount_expected_yesterday",
+  "pain_duration_yesterday",
+  location_field
+)
+
+required_monthly_fields <- c(
+  "participant_id", "programme_start_date", "reference_month", "menstrual_bleeding_last_month",
+  "menstrual_pain_last_month", "vaginal_discharge_last_month", "clots_last_month",
+  "bleeding_product_material", "bleeding_days_change", "bleeding_spacing_change",
+  "bleeding_amount_change", "bleeding_start_predictability",
+  "bleeding_stop_predictability", "bleeding_color_change", "bleeding_smell_change",
+  "clot_number_change", "clot_size_change", "pain_severity_change",
+  "pain_days_change", "pain_location_change", "discharge_change",
+  "bleeding_management_impact", "pain_management_impact",
+  "bleeding_daily_activities_impact", "pain_daily_activities_impact"
+)
+
+missing_daily <- setdiff(required_daily_fields, names(daily_data))
+missing_monthly <- setdiff(required_monthly_fields, names(monthly_data))
+if (length(missing_daily) + length(missing_monthly) > 0) {
+  stop("Missing fields. Daily: ", paste(missing_daily, collapse = ", "),
+       "; monthly: ", paste(missing_monthly, collapse = ", "))
+}
+
+n_participants <- n_distinct(c(daily_data$participant_id, monthly_data$participant_id))
+if (n_participants == 0 || nrow(daily_data) == 0 || nrow(monthly_data) == 0) {
+  stop("Both datasets must contain records.")
+}
+
+n_daily_submissions <- nrow(daily_data)
+n_monthly_submissions <- nrow(monthly_data)
+n_study_days <- n_distinct(daily_data$report_date)
+median_daily_completion <- daily_data |>
+  group_by(participant_id) |>
+  summarise(
+    submissions = n(),
+    expected_days = as.integer(max(daily_data$report_date) - first(programme_start_date)) + 1,
+    .groups = "drop"
+  ) |>
+  summarise(value = median(submissions / expected_days)) |>
+  pull(value)
+
+report_data <- daily_data |>
+  mutate(
+    bleeding = factor(
+      menstrual_bleeding_yesterday,
+      levels = c(0, 1),
+      labels = c("No bleeding", "Bleeding")
+    ),
+    bleeding_expected = factor(
+      bleeding_expected_yesterday,
+      levels = 1:3,
+      labels = c(
+        "Did not expect bleeding",
+        "Expected bleeding",
+        "Unsure whether to expect bleeding"
+      )
+    ),
+    bleeding_amount = factor(
+      bleeding_amount_yesterday,
+      levels = 1:4,
+      labels = c("Spotting", "Light", "Moderate", "Heavy"),
+      ordered = TRUE
+    ),
+    bleeding_amount_expected = factor(
+      bleeding_amount_expected_yesterday,
+      levels = 1:4,
+      labels = c(
+        "Amount expected",
+        "Lighter than expected",
+        "Heavier than expected",
+        "Unsure what amount to expect"
+      )
+    ),
+    pain = factor(
+      menstrual_pain_yesterday,
+      levels = c(0, 1),
+      labels = c("No pain", "Pain")
+    ),
+    pain_expected = factor(
+      pain_expected_yesterday,
+      levels = 1:3,
+      labels = c(
+        "Did not expect pain",
+        "Expected pain",
+        "Unsure whether to expect pain"
+      )
+    ),
+    pain_amount = factor(
+      pain_amount_yesterday,
+      levels = 1:4,
+      labels = c("Mild", "Moderate", "Severe", "Very severe"),
+      ordered = TRUE
+    ),
+    pain_amount_expected = factor(
+      pain_amount_expected_yesterday,
+      levels = 1:4,
+      labels = c(
+        "Severity expected",
+        "Less severe than expected",
+        "More severe than expected",
+        "Unsure what severity to expect"
+      )
+    ),
+    pain_duration = factor(
+      pain_duration_yesterday,
+      levels = 1:4,
+      labels = c(
+        "Briefly or for a short time",
+        "For part of the day",
+        "All day, on and off",
+        "All day, constantly"
+      ),
+      ordered = TRUE
+    )
+  )
+
+n_bleeding <- sum(daily_data$menstrual_bleeding_yesterday == 1, na.rm = TRUE)
+n_pain <- sum(daily_data$menstrual_pain_yesterday == 1, na.rm = TRUE)
+n_severe_pain <- sum(daily_data$pain_amount_yesterday %in% c(3, 4), na.rm = TRUE)
+clustered_factor_summary <- function(
+  data,
+  response_factor,
+  question,
+  count_name = "participants"
+) {
+  stopifnot(length(response_factor) == nrow(data), "participant_id" %in% names(data))
+  response_levels <- levels(response_factor)
+  if (is.null(response_levels)) {
+    response_levels <- sort(unique(na.omit(as.character(response_factor))))
+  }
+
+  cluster_ids <- sort(unique(data$participant_id))
+  cluster_index <- match(data$participant_id, cluster_ids)
+  denominator_by_cluster <- tabulate(cluster_index, nbins = length(cluster_ids))
+  response_matrix <- table(
+    factor(data$participant_id, levels = cluster_ids),
+    factor(as.character(response_factor), levels = response_levels)
+  )
+
+  bootstrap_percent <- replicate(bootstrap_replicates, {
+    cluster_weights <- tabulate(
+      sample.int(length(cluster_ids), length(cluster_ids), replace = TRUE),
+      nbins = length(cluster_ids)
+    )
+    as.numeric(crossprod(cluster_weights, response_matrix)) /
+      sum(cluster_weights * denominator_by_cluster)
+  })
+
+  alpha <- (1 - confidence_level) / 2
+  output <- tibble(
+    response_order = seq_along(response_levels),
+    response = response_levels,
+    count = as.integer(colSums(response_matrix)),
+    denominator = nrow(data),
+    percent = count / denominator,
+    ci_low = apply(bootstrap_percent, 1, quantile, probs = alpha, type = 6),
+    ci_high = apply(bootstrap_percent, 1, quantile, probs = 1 - alpha, type = 6),
+    question = question
+  )
+  names(output)[names(output) == "count"] <- count_name
+  output
+}
+
+summarise_response <- function(data, variable, question) {
+  clustered_factor_summary(
+    data,
+    response_factor = data[[variable]],
+    question = question,
+    count_name = "participants"
+  )
+}
+
+plot_daily_compositions <- function(data, question_levels, caption) {
+  plot_data <- data |>
+    mutate(
+      question = factor(question, levels = rev(question_levels)),
+      response_role = factor(response_order, levels = 1:4),
+      short_response = recode(
+        as.character(response),
+        "Did not expect bleeding" = "Not expected",
+        "Expected bleeding" = "Expected",
+        "Unsure whether to expect bleeding" = "Unsure",
+        "Amount expected" = "As expected",
+        "Lighter than expected" = "Lighter",
+        "Heavier than expected" = "Heavier",
+        "Unsure what amount to expect" = "Unsure",
+        "Did not expect pain" = "Not expected",
+        "Expected pain" = "Expected",
+        "Unsure whether to expect pain" = "Unsure",
+        "Severity expected" = "As expected",
+        "Less severe than expected" = "Less severe",
+        "More severe than expected" = "More severe",
+        "Unsure what severity to expect" = "Unsure",
+        "Briefly or for a short time" = "Brief",
+        "For part of the day" = "Part-day",
+        "All day, on and off" = "On/off all day",
+        "All day, constantly" = "Constant",
+        .default = as.character(response)
+      )
+    )
+
+  ggplot(plot_data, aes(percent, question, fill = response_role)) +
+    geom_col(width = .62, position = position_stack(reverse = TRUE)) +
+    geom_text(
+      aes(
+        colour = response_role,
+        label = sprintf(
+          "%s\n%s",
+          short_response,
+          scales::percent(percent, accuracy = .1)
+        )
+      ),
+      position = position_stack(vjust = .5, reverse = TRUE),
+      size = 2.65,
+      lineheight = .9
+    ) +
+    scale_fill_manual(
+      values = c(`1` = "#dce5e3", `2` = "#8fc5c1", `3` = "#167c77", `4` = "#d8c8a5"),
+      guide = "none",
+      na.value = "#d8c8a5"
+    ) +
+    scale_colour_manual(
+      values = c(`1` = "#1f2524", `2` = "#1f2524", `3` = "#ffffff", `4` = "#1f2524"),
+      guide = "none",
+      na.value = "#1f2524"
+    ) +
+    scale_x_continuous(
+      limits = c(0, 1),
+      breaks = seq(0, 1, by = .25),
+      labels = percent_format(accuracy = 1),
+      expand = expansion(mult = 0)
+    ) +
+    labs(
+      x = "Percent within the relevant daily submissions",
+      y = NULL,
+      caption = caption
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.caption = element_text(hjust = 0),
+      plot.margin = margin(8, 14, 8, 8)
+    )
+}
+
+# A participant is counted at most once per combined body region across all
+# daily submissions.
+region_results <- daily_data |>
+  filter(menstrual_pain_yesterday == 1) |>
+  transmute(
+    participant_id,
+    region = str_split(coalesce(.data[[location_field]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  mutate(region = combine_regions(region)) |>
+  distinct(participant_id, region) |>
+  count(region, name = "participants") |>
+  right_join(tibble(region = all_symmetric_regions), by = "region") |>
+  mutate(participants = replace_na(participants, 0L)) |>
+  mutate(percent = participants / n_participants * 100) |>
+  arrange(desc(percent), region)
+
+region_results_detailed <- daily_data |>
+  filter(menstrual_pain_yesterday == 1) |>
+  transmute(
+    participant_id,
+    region = str_split(coalesce(.data[[location_field]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  distinct(participant_id, region) |>
+  count(region, name = "participants") |>
+  right_join(tibble(region = all_detailed_regions), by = "region") |>
+  mutate(participants = replace_na(participants, 0L)) |>
+  mutate(percent = participants / n_participants * 100) |>
+  arrange(desc(percent), region)
+
+total_selections <- sum(region_results$participants)
+
+monthly_report <- monthly_data |>
+  mutate(
+    bleeding = factor(menstrual_bleeding_last_month, c(0, 1), c("No", "Yes")),
+    pain = factor(menstrual_pain_last_month, c(0, 1), c("No", "Yes")),
+    discharge = factor(vaginal_discharge_last_month, c(0, 1), c("No", "Yes")),
+    clots = factor(clots_last_month, c(0, 1), c("No", "Yes"))
+  )
+```
+
+```{r}
+#| label: svg-functions
+
+set_svg_fill <- function(node, colour) {
+  style <- xml_attr(node, "style")
+  style[is.na(style)] <- ""
+
+  if (str_detect(style, "(^|;)\\s*fill\\s*:")) {
+    style <- str_replace(
+      style,
+      "((^|;)\\s*fill\\s*:)\\s*[^;]+",
+      paste0("\\1", colour)
+    )
+  } else {
+    separator <- if_else(style == "", "", ";")
+    style <- paste0(style, separator, "fill:", colour)
+  }
+
+  xml_set_attr(node, "style", style)
+  existing_class <- xml_attr(node, "class")
+  existing_class[is.na(existing_class)] <- ""
+  xml_set_attr(node, "class", str_squish(paste(existing_class, "bodymap-region")))
+}
+
+build_bodymap <- function(svg_file, results, title, region_transform = combine_regions) {
+  svg <- read_xml(svg_file)
+  root <- xml_root(svg)
+
+  if (is.na(xml_attr(root, "viewBox"))) {
+    width <- parse_number(xml_attr(root, "width"))
+    height <- parse_number(xml_attr(root, "height"))
+    xml_set_attr(root, "viewBox", paste(0, 0, width, height))
+  }
+
+  xml_set_attr(root, "width", "100%")
+  xml_set_attr(root, "height", "auto")
+  xml_set_attr(root, "role", "img")
+  xml_set_attr(root, "aria-label", title)
+
+  # Select only drawable body-region objects. This excludes Affinity's embedded
+  # background image and definition IDs while retaining grouped regions.
+  id_nodes <- xml_find_all(
+    svg,
+    "//*[@id and (self::*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'] or ./*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'])]"
+  )
+  svg_ids <- xml_attr(id_nodes, "id")
+
+  mapped <- tibble(
+    svg_region = svg_ids,
+    region = region_transform(svg_ids)
+  ) |>
+    left_join(results, by = "region") |>
+    mutate(
+      participants = replace_na(participants, 0L),
+      percent = replace_na(percent, 0)
+    )
+
+  scale_max <- max(mapped$percent, 1)
+  fill_scale <- col_numeric(
+    palette = c("#f1f6f5", "#b8ddda", "#61b9b2", "#167c77", "#064743"),
+    domain = c(0, scale_max),
+    na.color = "#f1f6f5"
+  )
+
+  for (index in seq_len(nrow(mapped))) {
+    svg_region <- mapped$svg_region[[index]]
+    region <- mapped$region[[index]]
+    node <- xml_find_first(svg, sprintf("//*[@id='%s']", svg_region))
+
+    shape_nodes <- if (xml_name(node) %in% c("path", "polygon", "rect", "circle", "ellipse")) {
+      xml_find_all(node, "self::*")
+    } else {
+      xml_find_all(
+        node,
+        ".//*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse']"
+      )
+    }
+
+    colour <- fill_scale(mapped$percent[[index]])
+    for (node_index in seq_along(shape_nodes)) {
+      set_svg_fill(shape_nodes[[node_index]], colour)
+    }
+
+    old_titles <- xml_find_all(node, "./*[local-name()='title']")
+    xml_remove(old_titles)
+    tooltip <- sprintf(
+      "%s: %d participant%s (%.1f%%)",
+      str_replace_all(region, "_", " "),
+      mapped$participants[[index]],
+      if_else(mapped$participants[[index]] == 1, "", "s"),
+      mapped$percent[[index]]
+    )
+    xml_set_attr(node, "data-bodymap-tooltip", tooltip)
+    xml_set_attr(node, "aria-label", tooltip)
+    xml_set_attr(node, "tabindex", "0")
+    xml_add_child(node, "title", tooltip, .where = 1)
+  }
+
+  list(
+    markup = as.character(root),
+    mapped = mapped,
+    unknown = setdiff(results$region, unique(region_transform(svg_ids))),
+    maximum = scale_max
+  )
+}
+
+bodymap <- build_bodymap(svg_file, region_results, map_title)
+detailed_bodymap <- build_bodymap(
+  svg_file,
+  region_results_detailed,
+  detailed_map_title,
+  region_transform = identity
+)
+```
+
+## How to read this report
+
+This report answers several related—but different—questions. Keeping the unit and denominator clear is essential because the same participant can submit many daily forms, several monthly forms, and observations from multiple menstrual cycles.
+
+| Result type | What one observation represents | Main question answered |
+|---|---|---|
+| Daily summaries | One submitted daily form | What proportion of submitted days had this response? |
+| Monthly summaries | One submitted participant-month | What proportion of reported months had this response? |
+| Ever-reported body maps | One participant counted at most once per region | What proportion of participants reported this location at least once? |
+| Cycle-specific body maps | One participant counted at most once per region and inferred cycle | Among participants reaching this cycle, who reported this location at least once? |
+| Cycle-day heatmap | One participant per region, cycle, and observed cycle day | On which inferred cycle days was each pain location reported? |
+
+**Confidence intervals.** Whiskers on proportion bar charts are participant-clustered 95% bootstrap confidence intervals. The bootstrap resamples whole participants—not individual rows—so all daily or monthly records from the same person remain together. Wider intervals mean the estimate is less precise. They describe sampling uncertainty in this dataset; they do not correct bias from missing reports, an unrepresentative sample, or a misspecified cycle rule.
+
+**Important interpretation boundary.** These analyses are descriptive. A difference over time or between cycles is not, by itself, evidence that the contraceptive caused the difference. Formal causal questions would require a prespecified comparison design and statistical model.
+
+## Overview
+
+Daily percentages use submitted daily records as the denominator. Monthly percentages use submitted participant-month records. Conditional questions use only records for which the XLSForm skip logic makes the question relevant.
+
+```{r}
+#| label: summary
+#| results: asis
+
+summary_html <- tags$div(
+  class = "bodymap-summary",
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Participants represented"),
+    tags$div(class = "bodymap-stat-value", comma(n_participants))
+  ),
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Daily submissions"),
+    tags$div(class = "bodymap-stat-value", comma(n_daily_submissions))
+  ),
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Monthly submissions"),
+    tags$div(class = "bodymap-stat-value", comma(n_monthly_submissions))
+  ),
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Median daily completion"),
+    tags$div(class = "bodymap-stat-value", percent(median_daily_completion, accuracy = 0.1))
+  )
+)
+
+cat("```{=html}\n", as.character(summary_html), "\n```\n", sep = "")
+```
+
+All input paths, source-field names, body-map limits, cycle-inference rules, and display ranges are read from `analysis_config.yml`. Changing the configuration and rerendering this QMD updates the full report without editing the analysis code.
+
+# Daily questionnaire
+
+The daily form records symptoms about the previous day. The dummy data contain repeated submissions from the same participants, so percentages below describe submissions rather than unique people unless stated otherwise.
+
+**What.** This section describes bleeding and pain one day at a time.
+
+**How.** Each submitted daily form is initially one observation. Conditional follow-up questions use only forms for which the question applied—for example, pain severity is calculated only among forms reporting pain.
+
+**Why.** Daily reporting captures short-term variation that a monthly recall question may smooth over or forget. It is especially useful for identifying timing and symptom co-occurrence.
+
+## Daily symptom trend
+
+**What it shows.** The lines show the percentage of submitted daily forms reporting bleeding or pain on each calendar date.
+
+**How to read it.** Peaks indicate dates on which a larger share of available submissions were positive. They do not necessarily mean more participants were enrolled on those dates, so completion volume and missingness should be checked alongside the trend.
+
+```{r}
+#| label: daily-trend
+#| fig-height: 4.8
+#| fig-width: 10
+
+daily_trend <- daily_data |>
+  group_by(report_date) |>
+  summarise(
+    Bleeding = mean(menstrual_bleeding_yesterday == 1, na.rm = TRUE),
+    Pain = mean(menstrual_pain_yesterday == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_longer(c(Bleeding, Pain), names_to = "Symptom", values_to = "percent")
+
+ggplot(daily_trend, aes(report_date, percent, colour = Symptom, linetype = Symptom)) +
+  geom_line(linewidth = .8) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_colour_manual(values = c(Bleeding = "#167c77", Pain = "#8c4f7d")) +
+  labs(x = NULL, y = "Percent of daily submissions", colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.minor = element_blank())
+```
+
+## Daily menstrual bleeding
+
+**What it shows.** Four separate distributions describe whether bleeding occurred, whether it was expected, its amount, and how that amount compared with expectation.
+
+**How it is calculated.** Each panel has its own relevant denominator. The first two use all daily submissions; amount uses bleeding-positive submissions; comparison with expectation uses bleeding-positive submissions for which bleeding was expected.
+
+**Why it matters.** Separating occurrence, amount, and predictability distinguishes a common but expected pattern from bleeding that is surprising or difficult to anticipate.
+
+```{r}
+#| label: bleeding-summary
+#| fig-height: 5.8
+#| fig-width: 12
+
+bleeding_plot_data <- bind_rows(
+  summarise_response(report_data, "bleeding", "Bleeding yesterday"),
+  summarise_response(report_data, "bleeding_expected", "Expected bleeding"),
+  summarise_response(
+    filter(report_data, menstrual_bleeding_yesterday == 1),
+    "bleeding_amount",
+    "Amount among bleeding reporters"
+  ),
+  summarise_response(
+    filter(
+      report_data,
+      menstrual_bleeding_yesterday == 1,
+      bleeding_expected_yesterday == 2
+    ),
+    "bleeding_amount_expected",
+    "Amount compared with expectation"
+  )
+) |>
+  mutate(
+    question = factor(
+      question,
+      levels = c(
+        "Bleeding yesterday",
+        "Expected bleeding",
+        "Amount among bleeding reporters",
+        "Amount compared with expectation"
+      )
+    )
+  ) |>
+  arrange(question, response_order)
+
+plot_daily_compositions(
+  bleeding_plot_data,
+  question_levels = c(
+    "Bleeding yesterday",
+    "Expected bleeding",
+    "Amount among bleeding reporters",
+    "Amount compared with expectation"
+  ),
+  caption = paste(
+    "Each row uses its own relevant denominator and sums to 100%.",
+    "Participant-clustered 95% confidence intervals are listed below."
+  )
+)
+```
+
+```{r}
+#| label: daily-bleeding-ci-table
+
+bleeding_plot_data |>
+  transmute(
+    Question = as.character(question),
+    Response = response,
+    `Daily submissions` = participants,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Daily menstrual pain
+
+**What it shows.** These panels separate pain occurrence, expectation, severity, severity relative to expectation, and duration.
+
+**How it is calculated.** Occurrence and expectedness use all daily submissions. Severity and duration use pain-positive submissions. Severity compared with expectation uses the subset for which pain was expected.
+
+**Why it matters.** Frequency alone does not capture symptom burden. Severity, duration, and unexpected pain may be more relevant to acceptability and daily functioning.
+
+```{r}
+#| label: pain-summary
+#| fig-height: 7
+#| fig-width: 12
+
+pain_plot_data <- bind_rows(
+  summarise_response(report_data, "pain", "Pain yesterday"),
+  summarise_response(report_data, "pain_expected", "Expected pain"),
+  summarise_response(
+    filter(report_data, menstrual_pain_yesterday == 1),
+    "pain_amount",
+    "Severity among pain reporters"
+  ),
+  summarise_response(
+    filter(
+      report_data,
+      menstrual_pain_yesterday == 1,
+      pain_expected_yesterday == 2
+    ),
+    "pain_amount_expected",
+    "Severity compared with expectation"
+  ),
+  summarise_response(
+    filter(report_data, menstrual_pain_yesterday == 1),
+    "pain_duration",
+    "Duration among pain reporters"
+  )
+) |>
+  mutate(
+    question = factor(
+      question,
+      levels = c(
+        "Pain yesterday",
+        "Expected pain",
+        "Severity among pain reporters",
+        "Severity compared with expectation",
+        "Duration among pain reporters"
+      )
+    )
+  ) |>
+  arrange(question, response_order)
+
+plot_daily_compositions(
+  pain_plot_data,
+  question_levels = c(
+    "Pain yesterday",
+    "Expected pain",
+    "Severity among pain reporters",
+    "Severity compared with expectation",
+    "Duration among pain reporters"
+  ),
+  caption = paste(
+    "Each row uses its own relevant denominator and sums to 100%.",
+    "Participant-clustered 95% confidence intervals are listed below."
+  )
+)
+```
+
+```{r}
+#| label: daily-pain-ci-table
+
+pain_plot_data |>
+  transmute(
+    Question = as.character(question),
+    Response = response,
+    `Daily submissions` = participants,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Daily bleeding and pain together
+
+**What it shows.** Each horizontal bar is all daily submissions in one bleeding group. The two sections show the complementary proportions reporting no pain and pain, so every submitted day is represented.
+
+**How it is calculated.** Percentages sum to 100% separately within bleeding and non-bleeding submissions. Counts are daily forms rather than unique participants; participant-clustered confidence intervals are provided below.
+
+**Why it matters.** This is an internal descriptive comparator: it indicates whether pain is concentrated on days with bleeding. The clustered interval keeps each participant's repeated records together, but the chart still does not establish causation.
+
+```{r}
+#| label: bleeding-pain
+#| fig-height: 3.8
+#| fig-width: 10
+
+bleeding_pain <- bind_rows(lapply(
+  levels(report_data$bleeding),
+  function(bleeding_status) {
+    relevant_data <- report_data |>
+      filter(bleeding == bleeding_status)
+    summarise_response(relevant_data, "pain", bleeding_status) |>
+      transmute(
+        bleeding = bleeding_status,
+        response,
+        response_order,
+        submissions = participants,
+        denominator,
+        percent,
+        ci_low,
+        ci_high
+      )
+  }
+)) |>
+  mutate(
+    bleeding = factor(
+      bleeding,
+      levels = rev(levels(report_data$bleeding))
+    ),
+    response = factor(response, levels = c("No pain", "Pain"))
+  )
+
+ggplot(bleeding_pain, aes(percent, bleeding, fill = response)) +
+  geom_col(width = .62, position = position_stack(reverse = TRUE)) +
+  geom_text(
+    aes(
+      colour = response,
+      label = sprintf(
+        "%s\nn=%s · %s",
+        response,
+        submissions,
+        scales::percent(percent, accuracy = .1)
+      )
+    ),
+    position = position_stack(vjust = .5, reverse = TRUE),
+    size = 3.3,
+    lineheight = .9
+  ) +
+  scale_fill_manual(
+    values = c("No pain" = "#dce5e3", "Pain" = "#8c4f7d"),
+    guide = "none"
+  ) +
+  scale_colour_manual(
+    values = c("No pain" = "#1f2524", "Pain" = "#ffffff"),
+    guide = "none"
+  ) +
+  scale_x_continuous(
+    labels = percent_format(accuracy = 1),
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = .25),
+    expand = expansion(mult = 0)
+  ) +
+  labs(
+    x = "Percent within bleeding group",
+    y = NULL,
+    caption = "Each row sums to 100%. Participant-clustered 95% confidence intervals are listed below."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(hjust = 0),
+    plot.margin = margin(8, 14, 8, 8)
+  )
+```
+
+```{r}
+#| label: bleeding-pain-ci-table
+
+bleeding_pain |>
+  transmute(
+    `Bleeding group` = as.character(bleeding),
+    `Pain response` = as.character(response),
+    `Daily submissions` = submissions,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  arrange(`Bleeding group`, `Pain response`) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Ever-reported pain location map (symmetric regions)
+
+Locations are read only from daily submissions where `${menstrual_pain_yesterday} = '1'`, because that is when the body-map question is shown. The denominator is nevertheless all unique participants in the dataset, making each percentage the proportion of the full cohort who reported pain in that region at least once. Left and right members of an otherwise identical region pair are combined. Hands and feet also ignore dorsal/ventral surface. Arms are grouped as fore, mid, or upper; legs are grouped as lower or upper. Each participant contributes at most once to a combined region across all pain-positive daily submissions.
+
+**What it answers.** “Did this participant ever report pain in this broader body area, regardless of side?”
+
+**Why use it.** The symmetric view is easier to communicate and less affected by inconsistent side selection. It should be presented alongside—not instead of—the detailed map when laterality could matter.
+
+```{r}
+#| label: body-map
+#| results: asis
+
+map_html <- tags$div(
+  id = "bodymap-report-symmetric",
+  class = "bodymap-report",
+  tags$div(
+    class = "bodymap-frame",
+    HTML(bodymap$markup),
+    tags$div(
+      class = "tooltip bodymap-hover",
+      role = "status",
+      `aria-live` = "polite",
+      tags$div(class = "tooltip-inner")
+    )
+  ),
+  tags$div(
+    class = "bodymap-legend",
+    `aria-label` = "Colour scale: percent of all participants",
+    tags$div(class = "bodymap-gradient"),
+    tags$div(
+      class = "bodymap-legend-labels",
+      tags$span("0%"),
+      tags$span("Percent of all participants"),
+      tags$span(sprintf("%.1f%%", bodymap$maximum))
+    )
+  ),
+  tags$div(
+    class = "bodymap-note",
+    "Hover over or focus any combined limb component to see its participant count and percentage."
+  ),
+  tags$script(HTML("(function () {
+    function initialiseBodymaps() {
+      document.querySelectorAll('.bodymap-report').forEach(function (root) {
+      if (root.dataset.bodymapInitialised === 'true') return;
+      root.dataset.bodymapInitialised = 'true';
+
+    const frame = root.querySelector('.bodymap-frame');
+    const tooltip = root.querySelector('.bodymap-hover');
+    const tooltipInner = tooltip.querySelector('.tooltip-inner');
+
+    function regionFrom(target) {
+      return target && target.closest
+        ? target.closest('[data-bodymap-tooltip]')
+        : null;
+    }
+
+    function showTooltip(region) {
+      if (!region || !frame.contains(region)) return;
+      tooltipInner.textContent = region.getAttribute('data-bodymap-tooltip');
+      tooltip.classList.add('is-visible');
+
+      const regionBox = region.getBoundingClientRect();
+      const frameBox = frame.getBoundingClientRect();
+      const tooltipBox = tooltip.getBoundingClientRect();
+      const inset = 8;
+
+      let left = regionBox.left - frameBox.left + regionBox.width / 2 - tooltipBox.width / 2;
+      left = Math.max(inset, Math.min(left, frameBox.width - tooltipBox.width - inset));
+
+      let top = regionBox.top - frameBox.top - tooltipBox.height - inset;
+      if (top < inset) top = regionBox.bottom - frameBox.top + inset;
+
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    }
+
+    function hideTooltip() {
+      tooltip.classList.remove('is-visible');
+    }
+
+    root.addEventListener('pointerover', function (event) {
+      const region = regionFrom(event.target);
+      if (region) showTooltip(region);
+    });
+
+    root.addEventListener('pointerout', function (event) {
+      const region = regionFrom(event.target);
+      const nextRegion = regionFrom(event.relatedTarget);
+      if (region && nextRegion !== region) hideTooltip();
+    });
+
+    root.addEventListener('focusin', function (event) {
+      const region = regionFrom(event.target);
+      if (region) showTooltip(region);
+    });
+
+    root.addEventListener('focusout', hideTooltip);
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initialiseBodymaps, { once: true });
+    } else {
+      initialiseBodymaps();
+    }
+  })();"))
+)
+
+cat("```{=html}\n", as.character(map_html), "\n```\n", sep = "")
+
+if (length(bodymap$unknown) > 0) {
+  warning_html <- tags$div(
+    class = "bodymap-warning",
+    tags$strong("Unmatched response codes: "),
+    paste(bodymap$unknown, collapse = ", ")
+  )
+  cat("```{=html}\n", as.character(warning_html), "\n```\n", sep = "")
+}
+```
+
+### Most frequently ever-reported pain regions
+
+```{r}
+#| label: results-table
+#| results: asis
+
+region_results_for_table <- if (is.null(top_n)) {
+  region_results
+} else {
+  slice_head(region_results, n = top_n)
+}
+
+pain_regions_table <- region_results_for_table |>
+  transmute(
+    Region = str_replace_all(region, "_", " "),
+    `Reporting region (n)` = participants,
+    `All participants (N)` = n_participants,
+    `Percent of all participants` = percent(percent / 100, accuracy = 0.1)
+  ) |>
+  kable(format = "html", align = c("l", "r", "r", "r"))
+
+cat(
+  '<div class="bodymap-table-scroll">',
+  pain_regions_table,
+  '</div>',
+  sep = "\n"
+)
+```
+
+The window is deliberately compact, but every region remains available by scrolling. Since participants can select multiple pain regions, the location percentages are not expected to sum to 100%.
+
+## Time since contraceptive initiation
+
+Elapsed time since `programme_start_date` is directly observed and does not depend on bleeding-pattern inference. The chart divides follow-up into consecutive 30-day programme periods. Within each period, each participant contributes once to each symptom percentage regardless of how many daily forms they submitted.
+
+**Why this view is useful.** It asks whether the proportion of participants ever reporting bleeding or pain changes as exposure time accumulates, without requiring a menstrual cycle to be successfully inferred.
+
+```{r}
+#| label: programme-time
+#| fig-height: 5
+#| fig-width: 10
+
+programme_period_results <- daily_data |>
+  mutate(programme_period = days_since_contraceptive_start %/% 30 + 1L) |>
+  filter(between(programme_period, 1, programme_months_to_display)) |>
+  group_by(participant_id, programme_period) |>
+  summarise(
+    Bleeding = any(menstrual_bleeding_yesterday == 1, na.rm = TRUE),
+    Pain = any(menstrual_pain_yesterday == 1, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  pivot_longer(c(Bleeding, Pain), names_to = "Symptom", values_to = "reported") |>
+  group_by(programme_period, Symptom) |>
+  summarise(
+    participants = n(),
+    reporting = sum(reported),
+    percent = reporting / participants,
+    .groups = "drop"
+  ) |>
+  mutate(
+    ci_z = qnorm(1 - (1 - confidence_level) / 2),
+    ci_centre = (percent + ci_z^2 / (2 * participants)) /
+      (1 + ci_z^2 / participants),
+    ci_half_width = ci_z /
+      (1 + ci_z^2 / participants) *
+      sqrt(percent * (1 - percent) / participants + ci_z^2 / (4 * participants^2)),
+    ci_low = pmax(0, ci_centre - ci_half_width),
+    ci_high = pmin(1, ci_centre + ci_half_width)
+  )
+
+ggplot(programme_period_results, aes(programme_period, percent, colour = Symptom)) +
+  geom_ribbon(
+    aes(ymin = ci_low, ymax = ci_high, fill = Symptom, group = Symptom),
+    colour = NA,
+    alpha = .18
+  ) +
+  geom_line(linewidth = .8) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = seq_len(programme_months_to_display)) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  scale_colour_manual(values = c(Bleeding = "#167c77", Pain = "#8c4f7d")) +
+  scale_fill_manual(values = c(Bleeding = "#167c77", Pain = "#8c4f7d"), guide = "none") +
+  labs(
+    x = "30-day period since contraceptive initiation",
+    y = "Percent of participants reporting symptom",
+    colour = NULL,
+    caption = "Shaded ribbons are participant-level 95% Wilson confidence intervals."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(hjust = 0)
+  )
+```
+
+## Inferred menstrual cycles and cycle length
+
+Cycle numbering is participant-specific and begins after `programme_start_date`, the contraceptive/programme start date. The first confirmed menstrual onset after that date is inferred cycle 1, followed by inferred cycle 2, cycle 3, and so on. With the supplied configuration, CD1 is the first non-spotting bleeding day followed by blood reported on the next consecutive calendar day. Confirmed onsets less than the configured minimum interval apart are not allowed to increment the inferred cycle number. Distinct shorter events remain bleeding episodes and can be analysed separately.
+
+**What is being inferred.** The form does not contain an official cycle number or confirmed biological cycle start. The analysis therefore applies an explicit, configurable rule to observed bleeding reports.
+
+**Why this needs caution.** Missing daily forms can hide an onset and make two true cycles appear as one long interval. Long intervals are retained and flagged rather than silently removed, so the team can review whether they reflect genuine bleeding patterns or incomplete observation.
+
+```{r}
+#| label: programme-cycles-calculate
+
+daily_cycle_flags <- daily_data |>
+  filter(report_date >= programme_start_date) |>
+  arrange(participant_id, report_date) |>
+  group_by(participant_id) |>
+  mutate(
+    blood_reported = menstrual_bleeding_yesterday == 1,
+    qualifying_onset_day = blood_reported &
+      (spotting_starts_cycle | bleeding_amount_yesterday >= 2),
+    next_calendar_day_observed = lead(report_date) == report_date + 1,
+    blood_reported_next_day = next_calendar_day_observed & lead(blood_reported),
+    confirmed_onset_candidate = qualifying_onset_day &
+      (!require_next_day_blood | blood_reported_next_day)
+  ) |>
+  ungroup()
+
+# Standard bleeding/spotting episodes are separated by the configured number
+# of blood-free days. Calendar gaps larger than one day make the boundary
+# uncertain, so they are not silently treated as observed blood-free days.
+episode_start_flags <- daily_cycle_flags |>
+  group_by(participant_id) |>
+  mutate(
+    first_blood_report = blood_reported & cumsum(blood_reported) == 1L,
+    preceding_days_observed_and_clear = case_when(
+      bleed_free_days_between_episodes == 1 ~
+        lag(report_date) == report_date - 1 & !lag(blood_reported),
+      bleed_free_days_between_episodes == 2 ~
+        lag(report_date) == report_date - 1 &
+          lag(report_date, 2) == report_date - 2 &
+          !lag(blood_reported) & !lag(blood_reported, 2),
+      TRUE ~ FALSE
+    ),
+    bleeding_episode_start = blood_reported &
+      (first_blood_report | preceding_days_observed_and_clear)
+  ) |>
+  ungroup()
+
+bleeding_episode_starts <- episode_start_flags |>
+  filter(bleeding_episode_start) |>
+  arrange(participant_id, report_date) |>
+  group_by(participant_id) |>
+  transmute(
+    participant_id,
+    programme_start_date,
+    bleeding_episode_number = row_number(),
+    episode_start_date = report_date
+  ) |>
+  ungroup()
+
+# Select confirmed onset candidates recursively so that a short intervening
+# event cannot block a later valid onset merely because it appeared in lag().
+select_separated_onsets <- function(data, minimum_days) {
+  if (nrow(data) == 0) return(data)
+  keep <- logical(nrow(data))
+  last_kept_date <- as.Date(NA)
+  for (index in seq_len(nrow(data))) {
+    current_date <- data$report_date[[index]]
+    if (is.na(last_kept_date) || as.integer(current_date - last_kept_date) >= minimum_days) {
+      keep[[index]] <- TRUE
+      last_kept_date <- current_date
+    }
+  }
+  data[keep, , drop = FALSE]
+}
+
+qualifying_bleeding_days <- daily_cycle_flags |>
+  filter(confirmed_onset_candidate) |>
+  arrange(participant_id, report_date) |>
+  group_by(participant_id) |>
+  group_modify(~ select_separated_onsets(.x, minimum_cycle_gap_days)) |>
+  ungroup() |>
+  transmute(
+    participant_id,
+    programme_start_date,
+    onset_date = report_date
+  ) |>
+  arrange(participant_id, onset_date) |>
+  group_by(participant_id) |>
+  mutate(
+    cycle_number = row_number(),
+    next_onset_date = lead(onset_date),
+    cycle_length = as.integer(next_onset_date - onset_date)
+  ) |>
+  ungroup()
+
+# Each daily report is assigned to one and only one programme cycle: the most
+# recent CD1, ending immediately before the next CD1.
+cycle_daily <- daily_data |>
+  inner_join(
+    qualifying_bleeding_days,
+    by = c("participant_id", "programme_start_date"),
+    relationship = "many-to-many"
+  ) |>
+  filter(
+    report_date >= onset_date,
+    is.na(next_onset_date) | report_date < next_onset_date
+  ) |>
+  mutate(cycle_day = as.integer(report_date - onset_date) + 1)
+
+completed_cycles <- qualifying_bleeding_days |>
+  filter(!is.na(cycle_length))
+```
+
+```{r}
+#| label: cycle-lengths
+#| fig-height: 5.5
+#| fig-width: 10
+
+ggplot(
+  filter(completed_cycles, cycle_number <= cycles_to_display) |>
+    mutate(
+      interval_status = if_else(
+        cycle_length > long_cycle_review_days,
+        paste0("> ", long_cycle_review_days, " days: review"),
+        paste0("≤ ", long_cycle_review_days, " days")
+      )
+    ),
+  aes(factor(cycle_number), cycle_length)
+) +
+  geom_boxplot(fill = "#b8ddda", colour = "#167c77", outlier.shape = NA) +
+  geom_jitter(aes(colour = interval_status), width = .12, alpha = .6) +
+  scale_colour_manual(
+    values = setNames(
+      c("#064743", "#c75b12"),
+      c(
+        paste0("≤ ", long_cycle_review_days, " days"),
+        paste0("> ", long_cycle_review_days, " days: review")
+      )
+    )
+  ) +
+  labs(
+    x = "Inferred cycle number since programme start",
+    y = "Observed cycle length (days)",
+    colour = "Interval status"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.minor = element_blank())
+```
+
+The final observed cycle for each participant has no subsequent CD1 and is therefore right-censored; it is not included in the cycle-length chart. Intervals longer than the configurable review threshold are retained and highlighted: these may be genuine long intervals, or may indicate that an intervening onset was missed because the required daily reports were unavailable.
+
+```{r}
+#| label: cycle-availability
+
+cycle_availability <- qualifying_bleeding_days |>
+  filter(cycle_number <= cycles_to_display) |>
+  group_by(cycle_number) |>
+  summarise(
+    `Participants reaching inferred cycle` = n_distinct(participant_id),
+    `Participants with completed cycle` = n_distinct(participant_id[!is.na(cycle_length)]),
+    .groups = "drop"
+  ) |>
+  rename(`Inferred cycle` = cycle_number)
+
+kable(cycle_availability, align = c("r", "r", "r"))
+```
+
+## Ever-reported pain by inferred cycle
+
+Within each numbered cycle, a participant contributes at most once to each body region. The denominator is participants with that observed cycle, not daily submissions.
+
+**What it shows.** Each small bar chart asks whether a region was reported at least once during inferred cycles 1, 2, and 3.
+
+**Why it matters.** This separates a persistent location from one that becomes more or less common over successive programme cycles. The shared percentage scale supports comparison across regions; the confidence interval reflects the number of participants reaching each cycle.
+
+```{r}
+#| label: pain-by-programme-cycle
+#| fig-height: 28
+#| fig-width: 12
+
+completed_cycle_keys <- completed_cycles |>
+  filter(cycle_number <= cycles_to_display) |>
+  select(participant_id, cycle_number)
+
+cycle_denominators <- completed_cycle_keys |>
+  distinct(participant_id, cycle_number) |>
+  count(cycle_number, name = "eligible_participants")
+
+cycle_region_results <- cycle_daily |>
+  semi_join(completed_cycle_keys, by = c("participant_id", "cycle_number")) |>
+  filter(menstrual_pain_yesterday == 1) |>
+  transmute(
+    participant_id,
+    cycle_number,
+    region = str_split(coalesce(.data[[location_field]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  mutate(region = combine_regions(region)) |>
+  distinct(participant_id, cycle_number, region) |>
+  count(cycle_number, region, name = "participants") |>
+  complete(
+    cycle_number = seq_len(cycles_to_display),
+    region = all_symmetric_regions,
+    fill = list(participants = 0L)
+  ) |>
+  left_join(cycle_denominators, by = "cycle_number") |>
+  mutate(
+    percent = participants / eligible_participants,
+    ci_z = qnorm(1 - (1 - confidence_level) / 2),
+    ci_centre = (percent + ci_z^2 / (2 * eligible_participants)) /
+      (1 + ci_z^2 / eligible_participants),
+    ci_half_width = ci_z /
+      (1 + ci_z^2 / eligible_participants) *
+      sqrt(
+        percent * (1 - percent) / eligible_participants +
+          ci_z^2 / (4 * eligible_participants^2)
+      ),
+    ci_low = pmax(0, ci_centre - ci_half_width),
+    ci_high = pmin(1, ci_centre + ci_half_width)
+  )
+
+ggplot(
+  cycle_region_results |>
+    mutate(region_label = str_replace_all(region, "_", " ")),
+  aes(factor(cycle_number), percent)
+) +
+  geom_col(fill = "#167c77", width = .72) +
+  geom_errorbar(
+    aes(ymin = ci_low, ymax = ci_high),
+    width = .15,
+    linewidth = .4
+  ) +
+  geom_text(
+    aes(
+      y = pmin(ci_high + .025, 1),
+      label = if_else(is.na(percent), "—", scales::percent(percent, accuracy = 1))
+    ),
+    vjust = 0,
+    size = 2.5
+  ) +
+  facet_wrap(
+    vars(region_label),
+    ncol = 3,
+    axes = "all_x",
+    axis.labels = "all_x"
+  ) +
+  scale_y_continuous(
+    labels = percent_format(accuracy = 1),
+    expand = expansion(mult = c(0, .10))
+  ) +
+  labs(
+    x = "Inferred cycle number since programme start",
+    y = "Percent of participants with the observed cycle",
+    caption = "Whiskers are participant-level 95% Wilson confidence intervals."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    strip.text = element_text(face = "bold"),
+    plot.margin = margin(t = 14, r = 10, b = 10, l = 10)
+  )
+```
+
+Each facet shows one symmetric pain region, including regions with no reports. A zero means that participants reached that inferred cycle but nobody reported the region; a dash means that no participant had an eligible completed cycle for that cell. The table below provides the same complete results numerically.
+
+```{r}
+#| label: all-regions-by-cycle-table
+#| results: asis
+
+cycle_region_rank <- cycle_region_results |>
+  group_by(region) |>
+  summarise(
+    aggregate_percent = sum(participants, na.rm = TRUE) /
+      sum(eligible_participants, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+cycle_regions_table <- cycle_region_results |>
+  left_join(cycle_region_rank, by = "region") |>
+  transmute(
+    Region = str_replace_all(region, "_", " "),
+    aggregate_percent,
+    cycle_number,
+    value = sprintf(
+      "%s (%s)",
+      participants,
+      percent(percent, accuracy = .1)
+    )
+  ) |>
+  pivot_wider(
+    names_from = cycle_number,
+    names_prefix = "Inferred cycle ",
+    values_from = value,
+    values_fill = "0 (0.0%)"
+  ) |>
+  arrange(desc(aggregate_percent), Region) |>
+  select(-aggregate_percent) |>
+  kable(format = "html", align = c("l", rep("r", cycles_to_display)))
+
+cat(
+  '<div class="bodymap-table-scroll">',
+  cycle_regions_table,
+  '</div>',
+  sep = "\n"
+)
+```
+
+Regions are ordered by their aggregate prevalence across the displayed cycles (the total region reports divided by the total eligible participant-cycle observations). The compact window scrolls to retain every zero-valued region without overwhelming the page.
+
+## Pain timing within successive inferred cycles
+
+The heatmap retains actual cycle day rather than stretching every cycle to 28 days. Within each programme-cycle and cycle-day cell, each participant contributes at most once per region. The denominator is participants who submitted a daily report for that programme cycle and cycle day, so longer cycles and better reporters do not automatically contribute more weight to another cell.
+
+**What it shows.** Darker cells indicate that a larger percentage of participants observed on that cycle day reported the body region.
+
+**Why it matters.** The heatmap can reveal pain concentrated around inferred cycle onset, appearing later in the cycle, or recurring at similar times across successive cycles. It remains descriptive because cycle day is inferred from bleeding—not confirmed ovulation.
+
+```{r}
+#| label: cycle-day-timing-calculate
+
+cycle_day_denominators <- cycle_daily |>
+  filter(
+    cycle_number <= cycles_to_display,
+    between(cycle_day, 1, cycle_days_to_display)
+  ) |>
+  distinct(participant_id, cycle_number, cycle_day) |>
+  count(cycle_number, cycle_day, name = "eligible_participants")
+
+timing_regions_to_plot <- if (is.null(top_timing_region_n)) {
+  all_symmetric_regions
+} else {
+  region_results |>
+    slice_head(n = top_timing_region_n) |>
+    pull(region)
+}
+
+cycle_day_regions <- cycle_daily |>
+  filter(
+    cycle_number <= cycles_to_display,
+    between(cycle_day, 1, cycle_days_to_display),
+    menstrual_pain_yesterday == 1
+  ) |>
+  transmute(
+    participant_id,
+    cycle_number,
+    cycle_day,
+    region = str_split(coalesce(.data[[location_field]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  mutate(region = combine_regions(region)) |>
+  distinct(participant_id, cycle_number, cycle_day, region) |>
+  count(cycle_number, cycle_day, region, name = "participants") |>
+  complete(
+    cycle_number = seq_len(cycles_to_display),
+    cycle_day = seq_len(cycle_days_to_display),
+    region = all_symmetric_regions,
+    fill = list(participants = 0L)
+  ) |>
+  left_join(cycle_day_denominators, by = c("cycle_number", "cycle_day")) |>
+  mutate(percent = participants / eligible_participants)
+
+timing_plot_data <- cycle_day_regions |>
+  filter(region %in% timing_regions_to_plot) |>
+  mutate(
+    combined_cycle_day = (cycle_number - 1) * cycle_days_to_display + cycle_day,
+    region_label = str_replace_all(region, "_", " "),
+    region_label = factor(
+      region_label,
+      levels = rev(str_replace_all(timing_regions_to_plot, "_", " "))
+    ),
+    region_y = as.numeric(region_label)
+  )
+
+timing_region_breaks <- seq_along(levels(timing_plot_data$region_label))
+timing_region_labels <- levels(timing_plot_data$region_label)
+
+cycle_boundaries <- seq_len(cycles_to_display - 1) * cycle_days_to_display + .5
+cycle_centres <- tibble(
+  combined_cycle_day =
+    (seq_len(cycles_to_display) - 1) * cycle_days_to_display +
+      (cycle_days_to_display + 1) / 2,
+  label = paste("Inferred cycle", seq_len(cycles_to_display)),
+  region_y = length(timing_region_breaks) + 1.15
+)
+
+cycle_tick_days <- unique(c(1, seq(5, cycle_days_to_display, by = 5)))
+cycle_tick_days <- cycle_tick_days[cycle_tick_days < cycle_days_to_display]
+cycle_tick_positions <- unlist(lapply(
+  seq_len(cycles_to_display),
+  function(cycle_number) {
+    (cycle_number - 1) * cycle_days_to_display + cycle_tick_days
+  }
+))
+cycle_tick_labels <- rep(cycle_tick_days, cycles_to_display)
+```
+
+```{r}
+#| label: cycle-day-timing-heatmap
+#| fig-height: 14
+#| fig-width: 12
+
+ggplot(timing_plot_data, aes(combined_cycle_day, region_y, fill = percent)) +
+  geom_tile(colour = "white", linewidth = .3) +
+  geom_vline(
+    xintercept = cycle_boundaries,
+    colour = "#263b39",
+    linewidth = .8
+  ) +
+  geom_text(
+    data = cycle_centres,
+    aes(combined_cycle_day, region_y, label = label),
+    inherit.aes = FALSE,
+    fontface = "bold",
+    size = 3.6
+  ) +
+  scale_x_continuous(
+    breaks = cycle_tick_positions,
+    labels = cycle_tick_labels,
+    expand = expansion(mult = c(0, 0))
+  ) +
+  scale_y_continuous(
+    breaks = timing_region_breaks,
+    labels = timing_region_labels,
+    expand = expansion(add = c(.5, 1.7))
+  ) +
+  scale_fill_gradient(
+    low = "#f1f6f5", high = "#064743",
+    labels = percent_format(accuracy = 1), na.value = "#eeeeee"
+  ) +
+  labs(
+    x = "Cycle day within each inferred cycle",
+    y = NULL,
+    fill = "Participants\nreporting site"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_text(size = 8),
+    plot.margin = margin(t = 26, r = 10, b = 8, l = 8)
+  ) +
+  coord_cartesian(clip = "off")
+```
+
+All symmetric regions are shown in one continuous heatmap. Vertical lines separate successive inferred cycles and the x-axis restarts at cycle day 1 within each section. Explicit zero-report cells remain visible; pale grey means there was no eligible participant report for that inferred cycle day, so a percentage cannot be calculated. Set `bodymap.top_regions_timing` to an integer in the config only if a shorter, highest-prevalence subset is wanted.
+
+### Cumulative pain-site burden within each inferred cycle
+
+**What it shows.** This companion heatmap collapses the daily timing information into one value for each region and inferred cycle. A participant who reports a region on several days has a larger value than someone who reports it once.
+
+**How it is calculated.** For each participant and completed inferred cycle, the numerator is observed daily forms on which the region was reported and the denominator is all observed daily forms in that cycle. These participant-level proportions are then averaged, giving every participant equal weight despite differences in form completion.
+
+**Why it matters.** The ever-reported chart measures how widely a site occurs across participants. This measure instead captures persistence across days. A region can therefore have broad reach but low cumulative burden, or affect fewer participants repeatedly.
+
+```{r}
+#| label: cycle-region-cumulative-burden
+#| fig-height: 12
+#| fig-width: 9
+
+participant_cycle_observed_days <- cycle_daily |>
+  semi_join(completed_cycle_keys, by = c("participant_id", "cycle_number")) |>
+  filter(
+    cycle_number <= cycles_to_display,
+    between(cycle_day, 1, cycle_days_to_display)
+  ) |>
+  distinct(participant_id, cycle_number, report_date) |>
+  count(participant_id, cycle_number, name = "observed_days")
+
+participant_cycle_region_days <- cycle_daily |>
+  semi_join(completed_cycle_keys, by = c("participant_id", "cycle_number")) |>
+  filter(
+    cycle_number <= cycles_to_display,
+    between(cycle_day, 1, cycle_days_to_display),
+    menstrual_pain_yesterday == 1
+  ) |>
+  transmute(
+    participant_id,
+    cycle_number,
+    report_date,
+    region = str_split(coalesce(.data[[location_field]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  mutate(region = combine_regions(region)) |>
+  distinct(participant_id, cycle_number, report_date, region) |>
+  count(participant_id, cycle_number, region, name = "region_days")
+
+participant_cycle_burden <- crossing(
+  participant_cycle_observed_days,
+  region = all_symmetric_regions
+) |>
+  left_join(
+    participant_cycle_region_days,
+    by = c("participant_id", "cycle_number", "region")
+  ) |>
+  mutate(
+    region_days = replace_na(region_days, 0L),
+    observed_day_share = region_days / observed_days
+  )
+
+cycle_region_burden <- participant_cycle_burden |>
+  group_by(cycle_number, region) |>
+  summarise(
+    participants = n(),
+    region_days = sum(region_days),
+    observed_days = sum(observed_days),
+    mean_observed_day_share = mean(observed_day_share),
+    .groups = "drop"
+  )
+
+burden_region_order <- cycle_region_burden |>
+  group_by(region) |>
+  summarise(
+    aggregate_burden = weighted.mean(
+      mean_observed_day_share,
+      participants,
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) |>
+  arrange(desc(aggregate_burden), region) |>
+  pull(region)
+
+burden_plot_data <- cycle_region_burden |>
+  mutate(
+    region_label = str_replace_all(region, "_", " "),
+    region_label = factor(
+      region_label,
+      levels = rev(str_replace_all(burden_region_order, "_", " "))
+    )
+  )
+
+ggplot(
+  burden_plot_data,
+  aes(factor(cycle_number), region_label, fill = mean_observed_day_share)
+) +
+  geom_tile(colour = "white", linewidth = .45) +
+  geom_text(
+    aes(label = scales::percent(mean_observed_day_share, accuracy = .1)),
+    size = 2.7
+  ) +
+  scale_fill_gradient(
+    low = "#f1f6f5",
+    high = "#064743",
+    labels = percent_format(accuracy = 1)
+  ) +
+  labs(
+    x = "Inferred cycle number since programme start",
+    y = NULL,
+    fill = "Mean share of\nobserved days"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "right",
+    axis.text.x = element_text(face = "bold")
+  )
+```
+
+Rows are ordered by cumulative burden across the displayed cycles. A value of 10%, for example, means that the average participant reported that region on 10% of their observed daily forms within that completed cycle. This is a reporting-day burden measure rather than a biological duration estimate: unsubmitted days remain unknown.
+
+### Available participants by inferred cycle and cycle day
+
+This retention-style chart shows the denominator behind the heatmap. Each line is an inferred cycle; its height on a given cycle day is the number of participants who supplied a daily report on that day. A falling line therefore reflects a mixture of shorter cycles and missing daily forms. It resembles an at-risk curve, but it is not a formal survival estimate because participants can miss one day and submit again later.
+
+```{r}
+#| label: cycle-day-denominators
+#| fig-height: 5
+#| fig-width: 10
+
+cycle_day_availability <- cycle_day_denominators |>
+  filter(
+    cycle_number <= cycles_to_display,
+    cycle_day <= cycle_days_to_display
+  ) |>
+  complete(
+    cycle_number = seq_len(cycles_to_display),
+    cycle_day = seq_len(cycle_days_to_display),
+    fill = list(eligible_participants = 0L)
+  ) |>
+  mutate(cycle = paste("Inferred cycle", cycle_number))
+
+ggplot(
+  cycle_day_availability,
+  aes(cycle_day, eligible_participants, colour = cycle, group = cycle)
+) +
+  geom_step(linewidth = .85, direction = "hv") +
+  geom_point(size = 1.25, alpha = .75) +
+  scale_x_continuous(
+    breaks = unique(c(1, seq(5, cycle_days_to_display, by = 5))),
+    limits = c(1, cycle_days_to_display)
+  ) +
+  scale_y_continuous(
+    breaks = pretty_breaks(),
+    expand = expansion(mult = c(0, .08))
+  ) +
+  scale_colour_manual(
+    values = c("#064743", "#2b8c87", "#8fc9c5")
+  ) +
+  labs(
+    x = "Cycle day",
+    y = "Participants with an observed daily report",
+    colour = NULL
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank()
+  )
+```
+
+Cycle day is anchored to observed bleeding rather than biologically confirmed ovulation. Cycle lengths are not normalised: later days naturally have smaller denominators when fewer participants have cycles of that length or supplied a report on that day. Any local increase after a fall indicates renewed form submission, not participants re-entering a biological risk set.
+
+# Monthly questionnaire
+
+The monthly form summarises the preceding month and asks about changes, predictability, management, and impacts. Its unit of analysis is a participant-month.
+
+**What.** This section summarises the participant's overall experience of the preceding month.
+
+**How.** Each submitted participant-month is one observation. A participant contributing six monthly forms contributes six observations, and the confidence intervals resample those records together as one participant cluster.
+
+**Why.** Monthly questions capture perceived change, predictability, management burden, and impact—concepts that are difficult to reconstruct from isolated daily answers alone.
+
+```{r}
+#| label: monthly-helpers
+
+summarise_codes <- function(data, variable, question, labels) {
+  clustered_factor_summary(
+    data,
+    response_factor = factor(data[[variable]], levels = seq_along(labels), labels = labels),
+    question = question,
+    count_name = "records"
+  ) |>
+    mutate(
+      code = response_order,
+      response = factor(response, levels = labels)
+    )
+}
+
+plot_monthly_facets <- function(data, height = 8) {
+  ggplot(data, aes(percent, response)) +
+    geom_col(fill = "#167c77", width = .68) +
+    geom_errorbar(
+      aes(xmin = ci_low, xmax = ci_high),
+      orientation = "y",
+      height = .18,
+      linewidth = .5
+    ) +
+    geom_text(
+      aes(label = sprintf("%s  %s", records, percent(percent, accuracy = .1))),
+      hjust = -.05, size = 3.3
+    ) +
+    facet_grid(question ~ ., scales = "free_y", space = "free_y") +
+    scale_x_continuous(labels = percent_format(accuracy = 1),
+                       expand = expansion(mult = c(0, .25))) +
+    labs(
+      x = "Percent within the relevant participant-months",
+      y = NULL,
+      caption = "Whiskers are participant-clustered 95% confidence intervals."
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+          strip.text.y = element_text(angle = 0, face = "bold"),
+          plot.margin = margin(8, 48, 8, 8))
+}
+
+plot_directional_three <- function(data, question_levels, caption) {
+  directional_summary <- data |>
+    filter(question %in% question_levels, code %in% 1:3) |>
+    mutate(question = factor(question, levels = rev(question_levels))) |>
+    arrange(question, code) |>
+    group_by(question) |>
+    summarise(
+      left_response = as.character(response[code == 1]),
+      left_records = records[code == 1],
+      left_percent = percent[code == 1],
+      neutral_response = as.character(response[code == 2]),
+      neutral_records = records[code == 2],
+      neutral_percent = percent[code == 2],
+      right_response = as.character(response[code == 3]),
+      right_records = records[code == 3],
+      right_percent = percent[code == 3],
+      .groups = "drop"
+    ) |>
+    mutate(y = as.numeric(question))
+
+  segments <- bind_rows(
+    directional_summary |>
+      transmute(
+        question, y, segment = "First response",
+        xmin = -neutral_percent / 2 - left_percent,
+        xmax = -neutral_percent / 2,
+        label_x = (xmin + xmax) / 2,
+        label = sprintf(
+          "%s\nn=%s · %s",
+          left_response, left_records, scales::percent(left_percent, accuracy = .1)
+        )
+      ),
+    directional_summary |>
+      transmute(
+        question, y, segment = "About the same",
+        xmin = -neutral_percent / 2,
+        xmax = neutral_percent / 2,
+        label_x = 0,
+        label = sprintf(
+          "%s\nn=%s · %s",
+          neutral_response, neutral_records, scales::percent(neutral_percent, accuracy = .1)
+        )
+      ),
+    directional_summary |>
+      transmute(
+        question, y, segment = "Third response",
+        xmin = neutral_percent / 2,
+        xmax = neutral_percent / 2 + right_percent,
+        label_x = (xmin + xmax) / 2,
+        label = sprintf(
+          "%s\nn=%s · %s",
+          right_response, right_records, scales::percent(right_percent, accuracy = .1)
+        )
+      )
+  )
+
+  ggplot(segments) +
+    geom_vline(xintercept = 0, colour = "#5f6b69", linewidth = .5) +
+    geom_rect(
+      aes(
+        xmin = xmin, xmax = xmax,
+        ymin = y - .36, ymax = y + .36,
+        fill = segment
+      )
+    ) +
+    geom_text(
+      aes(label_x, y, label = label, colour = segment),
+      size = 3.05,
+      lineheight = .9
+    ) +
+    scale_fill_manual(
+      values = c(
+        "First response" = "#8fc5c1",
+        "About the same" = "#dce5e3",
+        "Third response" = "#167c77"
+      ),
+      guide = "none"
+    ) +
+    scale_colour_manual(
+      values = c(
+        "First response" = "#1f2524",
+        "About the same" = "#1f2524",
+        "Third response" = "#ffffff"
+      ),
+      guide = "none"
+    ) +
+    scale_x_continuous(
+      limits = c(-1, 1),
+      breaks = seq(-1, 1, by = .25),
+      labels = function(value) scales::percent(abs(value), accuracy = 1)
+    ) +
+    scale_y_continuous(
+      breaks = seq_along(levels(directional_summary$question)),
+      labels = levels(directional_summary$question),
+      expand = expansion(add = .55)
+    ) +
+    labs(
+      x = "Response distribution centred on ‘about the same’",
+      y = NULL,
+      caption = caption
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.caption = element_text(hjust = 0),
+      plot.margin = margin(8, 18, 8, 8)
+    )
+}
+
+plot_complete_composition <- function(data, question_levels, caption) {
+  plot_data <- data |>
+    filter(question %in% question_levels) |>
+    mutate(
+      question = factor(question, levels = rev(question_levels)),
+      response_role = factor(response_order, levels = 1:4)
+    )
+
+  ggplot(plot_data, aes(percent, question, fill = response_role)) +
+    geom_col(width = .62, position = position_stack(reverse = TRUE)) +
+    geom_text(
+      aes(
+        colour = response_role,
+        label = if_else(
+          percent >= .055,
+          sprintf("%s\nn=%s · %s", response, records, scales::percent(percent, accuracy = .1)),
+          ""
+        )
+      ),
+      position = position_stack(vjust = .5, reverse = TRUE),
+      size = 2.95,
+      lineheight = .9
+    ) +
+    scale_fill_manual(
+      values = c(`1` = "#dce5e3", `2` = "#8fc5c1", `3` = "#167c77", `4` = "#d8c8a5"),
+      guide = "none",
+      na.value = "#d8c8a5"
+    ) +
+    scale_colour_manual(
+      values = c(`1` = "#1f2524", `2` = "#1f2524", `3` = "#ffffff", `4` = "#1f2524"),
+      guide = "none",
+      na.value = "#1f2524"
+    ) +
+    scale_x_continuous(
+      limits = c(0, 1),
+      breaks = seq(0, 1, by = .25),
+      labels = percent_format(accuracy = 1),
+      expand = expansion(mult = 0)
+    ) +
+    labs(
+      x = "Percent within the relevant participant-months",
+      y = NULL,
+      caption = caption
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.caption = element_text(hjust = 0),
+      plot.margin = margin(8, 14, 8, 8)
+    )
+}
+```
+
+## Monthly occurrence
+
+**What it shows.** The proportion of participant-months reporting any bleeding, pain, vaginal discharge, or clots. Clots use only months in which bleeding was reported.
+
+**Why it matters.** This is a high-level monthly prevalence view and a useful bridge between detailed daily reporting and participants' retrospective monthly experience.
+
+```{r}
+#| label: monthly-occurrence
+#| fig-height: 5.2
+#| fig-width: 12
+
+monthly_occurrence <- bind_rows(
+  summarise_response(monthly_report, "bleeding", "Any menstrual bleeding"),
+  summarise_response(monthly_report, "pain", "Any menstrual pain"),
+  summarise_response(monthly_report, "discharge", "Any vaginal discharge"),
+  summarise_response(filter(monthly_report, menstrual_bleeding_last_month == 1),
+                     "clots", "Clots among months with bleeding")
+) |>
+  rename(records = participants)
+
+plot_complete_composition(
+  monthly_occurrence,
+  question_levels = c(
+    "Any menstrual bleeding",
+    "Any menstrual pain",
+    "Any vaginal discharge",
+    "Clots among months with bleeding"
+  ),
+  caption = paste(
+    "Each row uses its own relevant denominator and sums to 100%.",
+    "Participant-clustered 95% confidence intervals are listed below."
+  )
+)
+```
+
+```{r}
+#| label: monthly-occurrence-ci-table
+
+monthly_occurrence |>
+  transmute(
+    Question = question,
+    Response = response,
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Bleeding products and materials
+
+Respondents could select up to two products or materials. The denominator is participant-months with bleeding, so percentages may sum to more than 100%.
+
+**How to read it.** Each bar is the percentage of bleeding-positive participant-months selecting that product; products are not mutually exclusive. The result describes management choices, not the amount of bleeding by itself.
+
+```{r}
+#| label: monthly-products
+#| fig-height: 5.8
+#| fig-width: 10
+
+product_labels <- c(
+  `1` = "Pad", `2` = "Tampon", `3` = "Panty liner",
+  `4` = "Regular underwear only", `5` = "Absorbent period underwear",
+  `6` = "Cloth, towel, or rag", `7` = "Menstrual cup or disc",
+  `8` = "Toilet paper", `9` = "Loose cotton or wool",
+  `10` = "No product or material", `11` = "Other"
+)
+
+monthly_bleeding <- monthly_data |> filter(menstrual_bleeding_last_month == 1)
+product_results <- bind_rows(lapply(names(product_labels), function(product_code) {
+  selected <- str_detect(
+    coalesce(monthly_bleeding$bleeding_product_material, ""),
+    paste0("(^| )", product_code, "( |$)")
+  )
+  clustered_factor_summary(
+    monthly_bleeding,
+    response_factor = factor(
+      selected,
+      levels = c(FALSE, TRUE),
+      labels = c("Not selected", "Selected")
+    ),
+    question = unname(product_labels[product_code]),
+    count_name = "records"
+  ) |>
+    filter(response == "Selected") |>
+    transmute(
+      product = product_code,
+      response = unname(product_labels[product_code]),
+      records,
+      percent,
+      ci_low,
+      ci_high
+    )
+})) |>
+  arrange(percent)
+
+ggplot(product_results, aes(percent, reorder(response, percent))) +
+  geom_col(fill = "#167c77", width = .68) +
+  geom_errorbar(
+    aes(xmin = ci_low, xmax = ci_high),
+    orientation = "y",
+    height = .18,
+    linewidth = .5
+  ) +
+  geom_text(
+    aes(
+      x = ci_high + .015,
+      label = sprintf("%s  %s", records, percent(percent, accuracy = .1))
+    ),
+    hjust = 0,
+    size = 3.4
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1),
+                     expand = expansion(mult = c(0, .16))) +
+  labs(
+    x = "Percent of participant-months with bleeding",
+    y = NULL,
+    caption = "Whiskers are participant-clustered 95% confidence intervals."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+        plot.margin = margin(8, 48, 8, 8))
+```
+
+## Monthly bleeding changes
+
+**What it shows.** The diverging chart places “about the same” at the centre and displays the two directional responses on either side. Every measure therefore uses one common horizontal scale.
+
+**Why it matters.** The layout makes internal comparators visible: for example, the team can compare the balance of lighter versus heavier bleeding and easier versus harder predictability without reading separate charts.
+
+```{r}
+#| label: monthly-bleeding-changes-directional
+#| fig-height: 6.2
+#| fig-width: 12
+
+mb <- monthly_data |> filter(menstrual_bleeding_last_month == 1)
+bleeding_changes <- bind_rows(
+  summarise_codes(mb, "bleeding_days_change", "Number of bleeding days",
+                  c("Fewer", "About the same", "More")),
+  summarise_codes(mb, "bleeding_spacing_change", "Spacing between bleeding days",
+                  c("Closer together", "About the same", "Further apart")),
+  summarise_codes(mb, "bleeding_amount_change", "Amount of bleeding",
+                  c("Lighter", "About the same", "Heavier")),
+  summarise_codes(mb, "bleeding_start_predictability", "Predicting when bleeding starts",
+                  c("Easier", "About the same", "Harder")),
+  summarise_codes(mb, "bleeding_stop_predictability", "Predicting when bleeding stops",
+                  c("Easier", "About the same", "Harder")),
+  summarise_codes(mb, "bleeding_color_change", "Bleeding colour",
+                  c("Same", "Somewhat different", "Very different", "Unsure")),
+  summarise_codes(mb, "bleeding_smell_change", "Bleeding smell",
+                  c("Same", "Somewhat different", "Very different", "Unsure"))
+)
+
+directional_question_levels <- c(
+  "Number of bleeding days",
+  "Spacing between bleeding days",
+  "Amount of bleeding",
+  "Predicting when bleeding starts",
+  "Predicting when bleeding stops"
+)
+
+directional_summary <- bleeding_changes |>
+  filter(question %in% directional_question_levels) |>
+  mutate(question = factor(question, levels = rev(directional_question_levels))) |>
+  arrange(question, code) |>
+  group_by(question) |>
+  summarise(
+    left_response = as.character(response[code == 1]),
+    left_records = records[code == 1],
+    left_percent = percent[code == 1],
+    neutral_response = as.character(response[code == 2]),
+    neutral_records = records[code == 2],
+    neutral_percent = percent[code == 2],
+    right_response = as.character(response[code == 3]),
+    right_records = records[code == 3],
+    right_percent = percent[code == 3],
+    .groups = "drop"
+  ) |>
+  mutate(y = as.numeric(question))
+
+directional_segments <- bind_rows(
+  directional_summary |>
+    transmute(
+      question, y, segment = "First response",
+      xmin = -neutral_percent / 2 - left_percent,
+      xmax = -neutral_percent / 2,
+      label_x = (xmin + xmax) / 2,
+      label = sprintf(
+        "%s\nn=%s · %s",
+        left_response, left_records, scales::percent(left_percent, accuracy = .1)
+      )
+    ),
+  directional_summary |>
+    transmute(
+      question, y, segment = "About the same",
+      xmin = -neutral_percent / 2,
+      xmax = neutral_percent / 2,
+      label_x = 0,
+      label = sprintf(
+        "%s\nn=%s · %s",
+        neutral_response, neutral_records, scales::percent(neutral_percent, accuracy = .1)
+      )
+    ),
+  directional_summary |>
+    transmute(
+      question, y, segment = "Third response",
+      xmin = neutral_percent / 2,
+      xmax = neutral_percent / 2 + right_percent,
+      label_x = (xmin + xmax) / 2,
+      label = sprintf(
+        "%s\nn=%s · %s",
+        right_response, right_records, scales::percent(right_percent, accuracy = .1)
+      )
+    )
+)
+
+ggplot(directional_segments) +
+  geom_vline(xintercept = 0, colour = "#5f6b69", linewidth = .5) +
+  geom_rect(
+    aes(
+      xmin = xmin, xmax = xmax,
+      ymin = y - .36, ymax = y + .36,
+      fill = segment
+    )
+  ) +
+  geom_text(
+    aes(label_x, y, label = label, colour = segment),
+    size = 3.05,
+    lineheight = .9
+  ) +
+  scale_fill_manual(
+    values = c(
+      "First response" = "#8fc5c1",
+      "About the same" = "#dce5e3",
+      "Third response" = "#167c77"
+    ),
+    guide = "none"
+  ) +
+  scale_colour_manual(
+    values = c(
+      "First response" = "#1f2524",
+      "About the same" = "#1f2524",
+      "Third response" = "#ffffff"
+    ),
+    guide = "none"
+  ) +
+  scale_x_continuous(
+    limits = c(-1, 1),
+    breaks = seq(-1, 1, by = .25),
+    labels = function(value) scales::percent(abs(value), accuracy = 1)
+  ) +
+  scale_y_continuous(
+    breaks = seq_along(levels(directional_summary$question)),
+    labels = levels(directional_summary$question),
+    expand = expansion(add = .55)
+  ) +
+  labs(
+    x = "Response distribution centred on ‘about the same’",
+    y = NULL,
+    caption = "Each row uses participant-months with menstrual bleeding as its denominator."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(hjust = 0),
+    plot.margin = margin(8, 18, 8, 8)
+  )
+```
+
+Colour and smell responses describe degree of difference rather than a left-to-right direction, so they are shown separately as complete compositions.
+
+```{r}
+#| label: monthly-bleeding-changes-difference
+#| fig-height: 3.6
+#| fig-width: 12
+
+difference_changes <- bleeding_changes |>
+  filter(question %in% c("Bleeding colour", "Bleeding smell")) |>
+  mutate(
+    question = factor(question, levels = c("Bleeding smell", "Bleeding colour")),
+    response = factor(
+      response,
+      levels = c("Same", "Somewhat different", "Very different", "Unsure")
+    )
+  )
+
+ggplot(difference_changes, aes(percent, question, fill = response)) +
+  geom_col(width = .62, position = position_stack(reverse = TRUE)) +
+  geom_text(
+    aes(
+      colour = response,
+      label = if_else(
+        percent >= .055,
+        sprintf("%s\nn=%s · %s", response, records, scales::percent(percent, accuracy = .1)),
+        ""
+      )
+    ),
+    position = position_stack(vjust = .5, reverse = TRUE),
+    size = 3.05,
+    lineheight = .9
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Same" = "#dce5e3",
+      "Somewhat different" = "#8fc5c1",
+      "Very different" = "#167c77",
+      "Unsure" = "#d8c8a5"
+    ),
+    guide = "none"
+  ) +
+  scale_colour_manual(
+    values = c(
+      "Same" = "#1f2524",
+      "Somewhat different" = "#1f2524",
+      "Very different" = "#ffffff",
+      "Unsure" = "#1f2524"
+    ),
+    guide = "none"
+  ) +
+  scale_x_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = .25),
+    labels = percent_format(accuracy = 1),
+    expand = expansion(mult = 0)
+  ) +
+  labs(x = "Percent of participant-months with menstrual bleeding", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(8, 14, 8, 8)
+  )
+```
+
+### Monthly bleeding change estimates with 95% confidence intervals
+
+The chart segments above show complete response compositions. Drawing an error bar over every stacked segment would obscure the comparison, so the participant-clustered intervals are provided numerically here.
+
+```{r}
+#| label: monthly-bleeding-change-ci-table
+
+bleeding_changes |>
+  arrange(question, response_order) |>
+  transmute(
+    Measure = question,
+    Response = as.character(response),
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Monthly clot, pain, and discharge changes
+
+**What it shows.** These questions describe perceived change relative to the participant's prior experience. Each question uses only participant-months for which the underlying symptom was relevant.
+
+**Why it matters.** Direction of change can be more informative for acceptability than simple symptom presence, especially when baseline experiences differ substantially between participants.
+
+```{r}
+#| label: monthly-other-changes-directional
+#| fig-height: 4.2
+#| fig-width: 12
+
+other_changes <- bind_rows(
+  summarise_codes(filter(monthly_data, clots_last_month == 1), "clot_number_change",
+                  "Number of clots", c("Fewer", "About the same", "More", "Unsure")),
+  summarise_codes(filter(monthly_data, clots_last_month == 1), "clot_size_change",
+                  "Clot size", c("Smaller", "About the same", "Larger", "Unsure")),
+  summarise_codes(filter(monthly_data, menstrual_pain_last_month == 1), "pain_severity_change",
+                  "Pain severity", c("Less", "About the same", "More")),
+  summarise_codes(filter(monthly_data, menstrual_pain_last_month == 1), "pain_days_change",
+                  "Number of pain days", c("Fewer", "About the same", "More")),
+  summarise_codes(filter(monthly_data, menstrual_pain_last_month == 1), "pain_location_change",
+                  "Pain locations", c("Same", "Same and different", "Different")),
+  summarise_codes(filter(monthly_data, vaginal_discharge_last_month == 1), "discharge_change",
+                  "Vaginal discharge", c("Same", "Somewhat different", "Very different", "Unsure"))
+)
+
+plot_directional_three(
+  other_changes,
+  question_levels = c("Pain severity", "Number of pain days"),
+  caption = "Each row uses pain-positive participant-months as its denominator."
+)
+```
+
+Clot questions include an “unsure” response, and pain-location and discharge questions describe degree of difference rather than a single direction. They are therefore shown as complete 100% compositions.
+
+```{r}
+#| label: monthly-other-changes-composition
+#| fig-height: 6.5
+#| fig-width: 12
+
+plot_complete_composition(
+  other_changes,
+  question_levels = c("Number of clots", "Clot size", "Pain locations", "Vaginal discharge"),
+  caption = "Clot rows use clot-positive participant-months; pain locations use pain-positive months; discharge uses discharge-positive months."
+)
+```
+
+```{r}
+#| label: monthly-other-change-ci-table
+
+other_changes |>
+  arrange(question, response_order) |>
+  transmute(
+    Measure = question,
+    Response = as.character(response),
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Monthly management and activity impacts
+
+**What it shows.** These responses describe whether symptom management and daily activities felt easier, unchanged, harder, or mixed.
+
+**Why it matters.** A programme can change symptoms without changing burden in the same direction. These measures connect clinical experiences to practical acceptability.
+
+```{r}
+#| label: monthly-impact
+#| fig-height: 6
+#| fig-width: 12
+
+impact_labels <- c("Easier", "About the same", "Harder", "Mixed: easier and harder")
+impact_results <- bind_rows(
+  summarise_codes(monthly_data, "bleeding_management_impact", "Managing bleeding", impact_labels),
+  summarise_codes(monthly_data, "pain_management_impact", "Managing pain", impact_labels),
+  summarise_codes(monthly_data, "bleeding_daily_activities_impact", "Bleeding impact on daily activities", impact_labels),
+  summarise_codes(monthly_data, "pain_daily_activities_impact", "Pain impact on daily activities", impact_labels)
+)
+plot_complete_composition(
+  impact_results,
+  question_levels = c(
+    "Managing bleeding",
+    "Managing pain",
+    "Bleeding impact on daily activities",
+    "Pain impact on daily activities"
+  ),
+  caption = "The mixed response is retained as a separate category rather than forced onto an easier–harder direction."
+)
+```
+
+```{r}
+#| label: monthly-impact-ci-table
+
+impact_results |>
+  arrange(question, response_order) |>
+  transmute(
+    Measure = question,
+    Response = as.character(response),
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+# Daily–monthly consistency
+
+This descriptive comparison links each monthly submission to that participant's daily submissions in the same calendar month.
+
+**What it shows.** Monthly symptom reporting is compared between participant-months with at least one corresponding positive daily report and those with no positive daily report.
+
+**Why it matters.** Strong agreement supports the idea that daily and monthly instruments are capturing related experiences. Disagreement is not automatically an error: monthly recall, missed daily forms, question wording, and different reference periods can all produce genuine differences.
+
+```{r}
+#| label: daily-monthly-consistency
+#| fig-height: 6
+#| fig-width: 10
+
+daily_by_month <- daily_data |>
+  mutate(reference_month = format(report_date, "%Y-%m")) |>
+  group_by(participant_id, reference_month) |>
+  summarise(
+    daily_submissions = n(),
+    daily_any_bleeding = as.integer(any(menstrual_bleeding_yesterday == 1, na.rm = TRUE)),
+    daily_any_pain = as.integer(any(menstrual_pain_yesterday == 1, na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+linked_months <- monthly_data |>
+  inner_join(daily_by_month, by = c("participant_id", "reference_month"))
+
+summarise_consistency <- function(data, daily_variable, monthly_variable, symptom_label) {
+  bind_rows(lapply(c(0L, 1L), function(daily_value) {
+    relevant_data <- data |>
+      filter(.data[[daily_variable]] == daily_value)
+    clustered_factor_summary(
+      relevant_data,
+      response_factor = factor(
+        relevant_data[[monthly_variable]],
+        levels = c(0, 1),
+        labels = c("No", "Yes")
+      ),
+      question = symptom_label,
+      count_name = "positive_records"
+    ) |>
+      filter(response == "Yes") |>
+      transmute(
+        records = denominator,
+        percent,
+        ci_low,
+        ci_high,
+        symptom = symptom_label,
+        daily_report = if_else(
+          daily_value == 1,
+          "At least one positive daily report",
+          "No positive daily report"
+        )
+      )
+  }))
+}
+
+consistency_plot <- bind_rows(
+  summarise_consistency(
+    linked_months,
+    "daily_any_bleeding",
+    "menstrual_bleeding_last_month",
+    "Monthly bleeding report"
+  ),
+  summarise_consistency(
+    linked_months,
+    "daily_any_pain",
+    "menstrual_pain_last_month",
+    "Monthly pain report"
+  )
+)
+
+ggplot(consistency_plot, aes(percent, daily_report)) +
+  geom_col(fill = "#167c77", width = .62) +
+  geom_errorbar(
+    aes(xmin = ci_low, xmax = ci_high),
+    orientation = "y",
+    height = .18,
+    linewidth = .5
+  ) +
+  geom_text(aes(label = sprintf("%s  %s", records, percent(percent, accuracy = .1))),
+            hjust = -.05, size = 3.5) +
+  facet_grid(symptom ~ ., scales = "free_y", space = "free_y") +
+  scale_x_continuous(
+    limits = c(0, 1.12), breaks = seq(0, 1, .25),
+    labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, 0))
+  ) +
+  labs(
+    x = "Percent reporting the symptom in the monthly form",
+    y = NULL,
+    caption = "Whiskers are participant-clustered 95% confidence intervals."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+        strip.text.y = element_text(angle = 0, face = "bold"),
+        plot.margin = margin(8, 48, 8, 8))
+```
+
+```{r}
+#| label: agreement-table
+
+agreement <- tibble(
+  Symptom = c("Bleeding", "Pain"),
+  `Linked participant-months` = nrow(linked_months),
+  `Daily/monthly agreement` = c(
+    mean(linked_months$daily_any_bleeding == linked_months$menstrual_bleeding_last_month),
+    mean(linked_months$daily_any_pain == linked_months$menstrual_pain_last_month)
+  )
+) |>
+  mutate(`Daily/monthly agreement` = percent(`Daily/monthly agreement`, accuracy = .1))
+
+kable(agreement, align = c("l", "r", "r"))
+```
+
+## Data-quality checks
+
+These checks identify structural problems that could invalidate interpretation—for example, duplicate records, skip-logic violations, unmatched SVG codes, or impossible cycle lengths. A zero means the specific issue was not found. Long inferred cycles are shown as review flags rather than errors because they may be genuine or may reflect an unobserved intervening onset.
+
+```{r}
+#| label: data-quality
+
+data_quality <- tibble(
+  Check = c(
+    "Daily: duplicate participant-date records",
+    "Daily: report dated before programme start",
+    "Daily: bleeding follow-up outside bleeding skip condition",
+    "Daily: pain follow-up outside pain skip condition",
+    "Monthly: duplicate participant-month records",
+    "Monthly: bleeding follow-up outside bleeding skip condition",
+    "Monthly: clot comparison outside clot skip condition",
+    "Monthly: pain comparison outside pain skip condition",
+    "Monthly: discharge comparison outside discharge skip condition",
+    "Monthly: more than two bleeding products/materials",
+    "Monthly: 'no product' selected with another option",
+    "Unmatched symmetric body-map response codes",
+    "Unmatched detailed body-map response codes",
+    "Inferred completed cycle length is zero or negative",
+    "Inferred completed cycle shorter than configured onset interval",
+    "Completed inferred cycles above review threshold (not excluded)",
+    "Daily record assigned to more than one inferred cycle"
+  ),
+  Issues = c(
+    sum(duplicated(daily_data[c("participant_id", "report_date")])),
+    sum(daily_data$report_date < daily_data$programme_start_date, na.rm = TRUE),
+    sum(
+      daily_data$menstrual_bleeding_yesterday == 0 &
+        (!is.na(daily_data$bleeding_amount_yesterday) |
+         !is.na(daily_data$bleeding_amount_expected_yesterday)),
+      na.rm = TRUE
+    ),
+    sum(
+      daily_data$menstrual_pain_yesterday == 0 &
+        (!is.na(daily_data$pain_amount_yesterday) |
+         !is.na(daily_data$pain_duration_yesterday) |
+         (!is.na(daily_data[[location_field]]) & str_trim(daily_data[[location_field]]) != "")),
+      na.rm = TRUE
+    ),
+    sum(duplicated(monthly_data[c("participant_id", "reference_month")])),
+    sum(
+      monthly_data$menstrual_bleeding_last_month == 0 &
+        (!is.na(monthly_data$clots_last_month) |
+         (!is.na(monthly_data$bleeding_product_material) & monthly_data$bleeding_product_material != "") |
+         !is.na(monthly_data$bleeding_days_change)), na.rm = TRUE
+    ),
+    sum(monthly_data$clots_last_month != 1 &
+          (!is.na(monthly_data$clot_number_change) | !is.na(monthly_data$clot_size_change)),
+        na.rm = TRUE),
+    sum(monthly_data$menstrual_pain_last_month == 0 &
+          (!is.na(monthly_data$pain_severity_change) | !is.na(monthly_data$pain_days_change) |
+           !is.na(monthly_data$pain_location_change)), na.rm = TRUE),
+    sum(monthly_data$vaginal_discharge_last_month == 0 & !is.na(monthly_data$discharge_change),
+      na.rm = TRUE
+    ),
+    sum(str_count(coalesce(monthly_data$bleeding_product_material, ""), "\\S+") > 2),
+    sum(str_detect(coalesce(monthly_data$bleeding_product_material, ""), "(^| )10( |$)") &
+          str_count(coalesce(monthly_data$bleeding_product_material, ""), "\\S+") > 1),
+    length(bodymap$unknown),
+    length(detailed_bodymap$unknown),
+    sum(completed_cycles$cycle_length <= 0, na.rm = TRUE),
+    sum(completed_cycles$cycle_length < minimum_cycle_gap_days, na.rm = TRUE),
+    sum(completed_cycles$cycle_length > long_cycle_review_days, na.rm = TRUE),
+    sum(duplicated(cycle_daily[c("participant_id", "report_date")]))
+  )
+)
+
+kable(data_quality, align = c("l", "r"))
+```
+
+## Analysis notes
+
+- Daily rows are repeated submissions. Daily symptom percentages use daily submissions as their denominator.
+- Both body maps use pain-positive daily submissions and all unique participants as the denominator. Each person contributes at most once per detailed or symmetric region across the observation period.
+- Programme cycles are numbered separately for each participant from the first qualifying CD1 after programme start. Completed cycle lengths remain in days and are not normalised to 28 days.
+- Cycle-specific prevalence counts each participant once per region and programme cycle. The timing heatmap counts each participant once per region, programme cycle, and cycle day; its cell denominator is participants with a report for that cycle and day.
+- Monthly rows are participant-months. Monthly conditional questions use only rows for which the XLSForm makes the question relevant.
+- Daily–monthly comparisons require a stable participant ID and a correctly aligned calendar month.
+- This is descriptive analysis. It does not test causal relationships or make clinical interpretations.
+- The dummy-data pain distribution is intentionally pelvic, abdominal, lumbosacral, breast, and head weighted for testing; it is illustrative and is not a clinical prevalence estimate.
+
+## Technical appendix: detailed ever-reported pain location map
+
+This version retains every original SVG region, including left/right and dorsal/ventral distinctions. Locations come only from pain-positive daily submissions; percentages use all unique participants as the denominator, and each participant contributes at most once per detailed region across the observation period.
+
+**What it answers.** “Did this participant ever report pain in this exact anatomical region during follow-up?” Repeated reports in the same region do not increase that participant's contribution.
+
+**Why it is in the appendix.** The detailed map preserves laterality and body surface for clinical or instrument-development review, while the symmetric map earlier in the report provides the clearer primary summary.
+
+```{r}
+#| label: detailed-body-map
+#| results: asis
+
+detailed_map_html <- tags$div(
+  id = "bodymap-report-detailed",
+  class = "bodymap-report",
+  tags$div(
+    class = "bodymap-frame",
+    HTML(detailed_bodymap$markup),
+    tags$div(
+      class = "tooltip bodymap-hover",
+      role = "status",
+      `aria-live` = "polite",
+      tags$div(class = "tooltip-inner")
+    )
+  ),
+  tags$div(
+    class = "bodymap-legend",
+    `aria-label` = "Colour scale: percent of all participants",
+    tags$div(class = "bodymap-gradient"),
+    tags$div(
+      class = "bodymap-legend-labels",
+      tags$span("0%"),
+      tags$span("Percent of all participants"),
+      tags$span(sprintf("%.1f%%", detailed_bodymap$maximum))
+    )
+  ),
+  tags$div(
+    class = "bodymap-note",
+    "Hover over or focus a detailed body region to see its participant count and percentage."
+  )
+)
+
+cat("```{=html}\n", as.character(detailed_map_html), "\n```\n", sep = "")
+
+if (length(detailed_bodymap$unknown) > 0) {
+  warning_html <- tags$div(
+    class = "bodymap-warning",
+    tags$strong("Unmatched detailed response codes: "),
+    paste(detailed_bodymap$unknown, collapse = ", ")
+  )
+  cat("```{=html}\n", as.character(warning_html), "\n```\n", sep = "")
+}
+```
