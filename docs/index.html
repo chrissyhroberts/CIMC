@@ -154,16 +154,17 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#recruitment-funnel" id="toc-recruitment-funnel" class="nav-link active" data-scroll-target="#recruitment-funnel"><span class="header-section-number">0.1</span> Recruitment funnel</a></li>
-  <li><a href="#enrolment-against-site-targets" id="toc-enrolment-against-site-targets" class="nav-link" data-scroll-target="#enrolment-against-site-targets"><span class="header-section-number">0.2</span> Enrolment against site targets</a></li>
-  <li><a href="#participant-progress" id="toc-participant-progress" class="nav-link" data-scroll-target="#participant-progress"><span class="header-section-number">0.3</span> Participant progress</a></li>
-  <li><a href="#daily-reporting-over-calendar-time" id="toc-daily-reporting-over-calendar-time" class="nav-link" data-scroll-target="#daily-reporting-over-calendar-time"><span class="header-section-number">0.4</span> Daily reporting over calendar time</a></li>
-  <li><a href="#completion-pattern-upset-chart" id="toc-completion-pattern-upset-chart" class="nav-link" data-scroll-target="#completion-pattern-upset-chart"><span class="header-section-number">0.5</span> Completion-pattern UpSet chart</a></li>
-  <li><a href="#action-lists" id="toc-action-lists" class="nav-link" data-scroll-target="#action-lists"><span class="header-section-number">0.6</span> Action lists</a>
+  <li><a href="#potential-protocol-deviations-and-violations" id="toc-potential-protocol-deviations-and-violations" class="nav-link active" data-scroll-target="#potential-protocol-deviations-and-violations"><span class="header-section-number">0.1</span> Potential protocol deviations and violations</a></li>
+  <li><a href="#recruitment-funnel" id="toc-recruitment-funnel" class="nav-link" data-scroll-target="#recruitment-funnel"><span class="header-section-number">0.2</span> Recruitment funnel</a></li>
+  <li><a href="#enrolment-against-site-targets" id="toc-enrolment-against-site-targets" class="nav-link" data-scroll-target="#enrolment-against-site-targets"><span class="header-section-number">0.3</span> Enrolment against site targets</a></li>
+  <li><a href="#participant-progress" id="toc-participant-progress" class="nav-link" data-scroll-target="#participant-progress"><span class="header-section-number">0.4</span> Participant progress</a></li>
+  <li><a href="#daily-reporting-over-calendar-time" id="toc-daily-reporting-over-calendar-time" class="nav-link" data-scroll-target="#daily-reporting-over-calendar-time"><span class="header-section-number">0.5</span> Daily reporting over calendar time</a></li>
+  <li><a href="#completion-pattern-upset-chart" id="toc-completion-pattern-upset-chart" class="nav-link" data-scroll-target="#completion-pattern-upset-chart"><span class="header-section-number">0.6</span> Completion-pattern UpSet chart</a></li>
+  <li><a href="#action-lists" id="toc-action-lists" class="nav-link" data-scroll-target="#action-lists"><span class="header-section-number">0.7</span> Action lists</a>
   <ul class="collapse">
-  <li><a href="#current-consecutive-miss-reminder-list" id="toc-current-consecutive-miss-reminder-list" class="nav-link" data-scroll-target="#current-consecutive-miss-reminder-list"><span class="header-section-number">0.6.1</span> Current consecutive-miss reminder list</a></li>
+  <li><a href="#current-consecutive-miss-reminder-list" id="toc-current-consecutive-miss-reminder-list" class="nav-link" data-scroll-target="#current-consecutive-miss-reminder-list"><span class="header-section-number">0.7.1</span> Current consecutive-miss reminder list</a></li>
   </ul></li>
-  <li><a href="#monitoring-definitions" id="toc-monitoring-definitions" class="nav-link" data-scroll-target="#monitoring-definitions"><span class="header-section-number">0.7</span> Monitoring definitions</a></li>
+  <li><a href="#monitoring-definitions" id="toc-monitoring-definitions" class="nav-link" data-scroll-target="#monitoring-definitions"><span class="header-section-number">0.8</span> Monitoring definitions</a></li>
   </ul>
 </nav>
     </div>
@@ -191,20 +192,20 @@ ul.task-list li input[type="checkbox"] {
 
 
 <p>Data are current through 24 August 2026. This front page is operational: it shows recruitment flow, follow-up coverage, and participants requiring action. Counts use linked participant IDs across the recruitment, enrolment, and CIMC forms.</p>
-<p><strong>Current source.</strong> Linked dummy development data; staged at 2026-08-25 11:36:30 UTC. Change <code>data_source.mode</code> in <code>dashboard_config.yml</code> to switch between development and production ingestion.</p>
+<p><strong>Current source.</strong> Linked dummy development data; staged at 2026-08-25 15:44:32 UTC. Change <code>data_source.mode</code> in <code>dashboard_config.yml</code> to switch between development and production ingestion.</p>
 <p><strong>What.</strong> This page gives the study team a current operational picture of recruitment, enrolment, follow-up and missing reports.</p>
 <p><strong>How.</strong> Records are linked by participant ID. Expected reports run from enrolment to the earliest of the configured follow-up end, data cutoff, or recorded method stop. The action lists apply the thresholds documented in <code>dashboard_config.yml</code>.</p>
 <p><strong>Why.</strong> It supports day-to-day decisions: whether recruitment is on target, whether follow-up is being sustained, and which participants may need timely contact. It is a monitoring page, not a clinical outcomes analysis.</p>
 <div class="monitor-kpis">
   <div class="monitor-kpi">
     <div class="monitor-kpi-label">Screened</div>
-    <div class="monitor-kpi-value">260</div>
+    <div class="monitor-kpi-value">172</div>
     <div class="monitor-kpi-note">Recruitment forms</div>
   </div>
   <div class="monitor-kpi">
     <div class="monitor-kpi-label">Eligible</div>
     <div class="monitor-kpi-value">171</div>
-    <div class="monitor-kpi-note">65.8%</div>
+    <div class="monitor-kpi-note">99.4%</div>
   </div>
   <div class="monitor-kpi">
     <div class="monitor-kpi-label">Enrolled</div>
@@ -237,13 +238,43 @@ ul.task-list li input[type="checkbox"] {
     <div class="monitor-kpi-note">≥3 consecutive missed days</div>
   </div>
   <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Protocol flags</div>
+    <div class="monitor-kpi-value">0</div>
+    <div class="monitor-kpi-note">0 participant(s)</div>
+  </div>
+  <div class="monitor-kpi">
     <div class="monitor-kpi-label">Data source</div>
     <div class="monitor-kpi-value">Development</div>
-    <div class="monitor-kpi-note">2026-08-25 11:36:30 UTC</div>
+    <div class="monitor-kpi-note">2026-08-25 15:44:32 UTC</div>
   </div>
 </div>
-<section id="recruitment-funnel" class="level2" data-number="0.1">
-<h2 data-number="0.1" class="anchored" data-anchor-id="recruitment-funnel"><span class="header-section-number">0.1</span> Recruitment funnel</h2>
+<section id="potential-protocol-deviations-and-violations" class="level2" data-number="0.1">
+<h2 data-number="0.1" class="anchored" data-anchor-id="potential-protocol-deviations-and-violations"><span class="header-section-number">0.1</span> Potential protocol deviations and violations</h2>
+<p><strong>What it shows.</strong> This section screens linked study forms for records that may represent a protocol deviation or violation. The supplied rules include CIMC reports without enrolment, missing programme start dates, reports dated before enrolment, duplicate participant-days, duplicate enrolments, and enrolments without recruitment records.</p>
+<p><strong>How it is calculated.</strong> Exact participant IDs and recorded dates are compared across recruitment, enrolment, and CIMC submissions. Each rule and its provisional classification are controlled in <code>dashboard_config.yml</code>. CIMC submissions without a valid linked programme start remain in this monitoring register but are excluded from symptom and cycle analyses.</p>
+<p><strong>Why it helps.</strong> A linkage problem should create an actionable signal rather than prevent the dashboard from rendering. These are <strong>potential</strong> events: the dashboard does not determine seriousness, causality, or reportability. The study team must verify source records and adjudicate each flag under the approved protocol and deviation-management procedures.</p>
+<div class="monitor-kpis">
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Potential violations</div>
+    <div class="monitor-kpi-value">0</div>
+    <div class="monitor-kpi-note">Flagged records requiring review</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Potential deviations</div>
+    <div class="monitor-kpi-value">0</div>
+    <div class="monitor-kpi-note">Flagged records requiring review</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Participants flagged</div>
+    <div class="monitor-kpi-value">0</div>
+    <div class="monitor-kpi-note">Unique IDs across all flags</div>
+  </div>
+</div>
+<p>No potential protocol deviations or violations were detected by the configured checks.</p>
+<p>The participant-level review file is regenerated on every render as <code>protocol_deviation_violation_review.csv</code>. In production, it remains in the protected project folder and is not copied into the publishable <code>docs/</code> site unless publication of action lists has been explicitly enabled.</p>
+</section>
+<section id="recruitment-funnel" class="level2" data-number="0.2">
+<h2 data-number="0.2" class="anchored" data-anchor-id="recruitment-funnel"><span class="header-section-number">0.2</span> Recruitment funnel</h2>
 <p><strong>What it shows.</strong> Unique people at successive stages from screening through daily reporting and completion of the observation window.</p>
 <p><strong>How it is calculated.</strong> A person appears in every stage they have reached, so this is a cumulative funnel rather than a set of mutually exclusive groups.</p>
 <p><strong>Why it helps.</strong> The largest drop between adjacent stages identifies where recruitment or onboarding may need attention.</p>
@@ -257,8 +288,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="enrolment-against-site-targets" class="level2" data-number="0.2">
-<h2 data-number="0.2" class="anchored" data-anchor-id="enrolment-against-site-targets"><span class="header-section-number">0.2</span> Enrolment against site targets</h2>
+<section id="enrolment-against-site-targets" class="level2" data-number="0.3">
+<h2 data-number="0.3" class="anchored" data-anchor-id="enrolment-against-site-targets"><span class="header-section-number">0.3</span> Enrolment against site targets</h2>
 <p><strong>What it shows.</strong> Enrolment achieved at each site relative to its configured target.</p>
 <p><strong>How it is calculated.</strong> Enrolled participants are counted once at their enrolment site and divided by that site’s target in <code>dashboard_config.yml</code>.</p>
 <p><strong>Why it helps.</strong> It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrolment.</p>
@@ -272,8 +303,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="participant-progress" class="level2" data-number="0.3">
-<h2 data-number="0.3" class="anchored" data-anchor-id="participant-progress"><span class="header-section-number">0.3</span> Participant progress</h2>
+<section id="participant-progress" class="level2" data-number="0.4">
+<h2 data-number="0.4" class="anchored" data-anchor-id="participant-progress"><span class="header-section-number">0.4</span> Participant progress</h2>
 <p><strong>What it shows.</strong> The current follow-up status of enrolled participants within each site.</p>
 <p><strong>How it is calculated.</strong> Status uses the configured observation window and method-discontinuation responses. “Reached day 90” means the time window elapsed; it does not require perfect questionnaire completion.</p>
 <p><strong>Why it helps.</strong> It separates participants who remain under active follow-up from those who have completed, stopped, or never begun daily reporting.</p>
@@ -287,8 +318,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="daily-reporting-over-calendar-time" class="level2" data-number="0.4">
-<h2 data-number="0.4" class="anchored" data-anchor-id="daily-reporting-over-calendar-time"><span class="header-section-number">0.4</span> Daily reporting over calendar time</h2>
+<section id="daily-reporting-over-calendar-time" class="level2" data-number="0.5">
+<h2 data-number="0.5" class="anchored" data-anchor-id="daily-reporting-over-calendar-time"><span class="header-section-number">0.5</span> Daily reporting over calendar time</h2>
 <p><strong>What it shows.</strong> The proportion of expected daily reports actually received in each site-week.</p>
 <p><strong>How it is calculated.</strong> Each point divides received participant-days by expected participant-days among people under observation that week.</p>
 <p><strong>Why it helps.</strong> It separates growth in the enrolled cohort from genuine reporting adherence and makes site-specific implementation changes visible over time.</p>
@@ -302,8 +333,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="completion-pattern-upset-chart" class="level2" data-number="0.5">
-<h2 data-number="0.5" class="anchored" data-anchor-id="completion-pattern-upset-chart"><span class="header-section-number">0.5</span> Completion-pattern UpSet chart</h2>
+<section id="completion-pattern-upset-chart" class="level2" data-number="0.6">
+<h2 data-number="0.6" class="anchored" data-anchor-id="completion-pattern-upset-chart"><span class="header-section-number">0.6</span> Completion-pattern UpSet chart</h2>
 <p><strong>What it shows.</strong> Exact combinations of reporting and follow-up milestones reached by participants.</p>
 <p><strong>How it is calculated.</strong> The upper bars count participants in each combination; filled dots identify the milestones included in that combination.</p>
 <p><strong>Why it helps.</strong> It shows whether apparent progress is driven by complete follow-up, strong daily adherence, monthly completion, or only one of those elements.</p>
@@ -317,8 +348,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="action-lists" class="level2" data-number="0.6">
-<h2 data-number="0.6" class="anchored" data-anchor-id="action-lists"><span class="header-section-number">0.6</span> Action lists</h2>
+<section id="action-lists" class="level2" data-number="0.7">
+<h2 data-number="0.7" class="anchored" data-anchor-id="action-lists"><span class="header-section-number">0.7</span> Action lists</h2>
 <p><strong>What they contain.</strong> Participant-level lists for specific follow-up actions, plus a complete operational progress file.</p>
 <p><strong>How they are produced.</strong> The CSVs are rebuilt from the current data every time the dashboard renders using the configured thresholds.</p>
 <p><strong>Why they help.</strong> They turn dashboard signals into practical worklists. They contain operational identifiers and dummy contact details here; production access should follow the study’s role-based confidentiality controls.</p>
@@ -344,13 +375,18 @@ ul.task-list li input[type="checkbox"] {
     <a href="monthly_report_due_targets.csv" download="monthly_report_due_targets.csv">Download CSV</a>
   </div>
   <div class="monitor-download">
+    <strong>Protocol deviation/violation review — 0</strong>
+    <div class="small text-muted">Automated cross-form flags requiring study-team verification and adjudication</div>
+    <a href="protocol_deviation_violation_review.csv" download="protocol_deviation_violation_review.csv">Download CSV</a>
+  </div>
+  <div class="monitor-download">
     <strong>Full participant progress — 132</strong>
     <div class="small text-muted">One operational progress row per enrolled participant</div>
     <a href="participant_progress_summary.csv" download="participant_progress_summary.csv">Download CSV</a>
   </div>
 </div>
-<section id="current-consecutive-miss-reminder-list" class="level3" data-number="0.6.1">
-<h3 data-number="0.6.1" class="anchored" data-anchor-id="current-consecutive-miss-reminder-list"><span class="header-section-number">0.6.1</span> Current consecutive-miss reminder list</h3>
+<section id="current-consecutive-miss-reminder-list" class="level3" data-number="0.7.1">
+<h3 data-number="0.7.1" class="anchored" data-anchor-id="current-consecutive-miss-reminder-list"><span class="header-section-number">0.7.1</span> Current consecutive-miss reminder list</h3>
 <div class="monitor-table-scroll">
 <table>
 <thead>
@@ -1005,8 +1041,8 @@ NA
 </div>
 </section>
 </section>
-<section id="monitoring-definitions" class="level2" data-number="0.7">
-<h2 data-number="0.7" class="anchored" data-anchor-id="monitoring-definitions"><span class="header-section-number">0.7</span> Monitoring definitions</h2>
+<section id="monitoring-definitions" class="level2" data-number="0.8">
+<h2 data-number="0.8" class="anchored" data-anchor-id="monitoring-definitions"><span class="header-section-number">0.8</span> Monitoring definitions</h2>
 <ul>
 <li><strong>Expected daily reports</strong> run from enrolment through the earliest of the configured follow-up day (90), the data cutoff, or a recorded method stop date.</li>
 <li><strong>Monthly reports expected</strong> are calendar-month sections due on configured day 1 of a month within that observed interval. The supplied setting matches the revised CIMC form.</li>

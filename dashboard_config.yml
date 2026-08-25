@@ -29,9 +29,9 @@ data_source:
     base_url: "https://kf.kobotoolbox.org"
     api_token_environment_variable: "KOBO_API_TOKEN"
     asset_uids:
-      recruitment: "REPLACE_WITH_RECRUITMENT_ASSET_UID"
-      enrolment: "REPLACE_WITH_ENROLMENT_ASSET_UID"
-      cimc: "REPLACE_WITH_CIMC_ASSET_UID"
+      recruitment: "aGTsMmXqJJozdciUMWtHbh"
+      enrolment: "aFXUYz53ZUjNBwm6tyKEvn"
+      cimc: "aUzYLx2ratBambJg5PA44s"
     page_size: 1000
     request_timeout_seconds: 120
     request_max_tries: 3
@@ -92,6 +92,30 @@ monitoring:
   monthly_report_grace_days: 3
   good_daily_completion_threshold: 0.80
   action_list_preview_rows: 30
+
+# --- Protocol-deviation and violation monitoring ---------------------------
+# These are automated screening flags, not final adjudications. Each rule can
+# be disabled or reclassified after agreement with the study team.
+protocol_monitoring:
+  rules:
+    cimc_without_enrolment:
+      enabled: true
+      severity: violation
+    missing_programme_start_date:
+      enabled: true
+      severity: violation
+    cimc_before_enrolment:
+      enabled: true
+      severity: deviation
+    duplicate_cimc_participant_date:
+      enabled: true
+      severity: deviation
+    duplicate_enrolment_participant:
+      enabled: true
+      severity: violation
+    enrolment_without_recruitment:
+      enabled: true
+      severity: deviation
 
 # --- Demographic display groupings ------------------------------------------
 demographics:

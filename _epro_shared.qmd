@@ -195,6 +195,9 @@ right_bases <- svg_id_scan[str_detect(svg_id_scan, "_Right$")] |>
 paired_bases <- intersect(left_bases, right_bases)
 
 combine_sides <- function(region) {
+  # Empty selections can arrive from tidyr as logical(0); make the function
+  # type-stable so a valid zero-report result remains a character vector.
+  region <- as.character(region)
   base <- str_remove(region, "_(?:Left|Right)$")
   if_else(region != base & base %in% paired_bases, base, region)
 }
@@ -203,6 +206,7 @@ combine_sides <- function(region) {
 # upper/mid/fore subdivision, and legs retain their upper/lower subdivision,
 # while also ignoring side and dorsal/ventral surface.
 combine_regions <- function(region) {
+  region <- as.character(region)
   side_combined <- combine_sides(region)
 
   case_when(
@@ -227,7 +231,11 @@ drawable_id_scan <- read_xml(svg_file) |>
 all_detailed_regions <- drawable_id_scan
 all_symmetric_regions <- unique(combine_regions(drawable_id_scan))
 
-daily_data <- read_csv(daily_data_file, show_col_types = FALSE) |>
+daily_data <- read_csv(
+  daily_data_file,
+  col_types = cols(participant_id = col_character()),
+  show_col_types = FALSE
+) |>
   rename(
     participant_id = all_of(participant_id_source_field),
     programme_start_date = all_of(programme_start_source_field),
@@ -239,7 +247,11 @@ daily_data <- read_csv(daily_data_file, show_col_types = FALSE) |>
     programme_start_date = as.Date(programme_start_date),
     days_since_contraceptive_start = as.integer(report_date - programme_start_date)
   )
-monthly_data <- read_csv(monthly_data_file, show_col_types = FALSE) |>
+monthly_data <- read_csv(
+  monthly_data_file,
+  col_types = cols(participant_id = col_character()),
+  show_col_types = FALSE
+) |>
   rename(
     participant_id = all_of(participant_id_source_field),
     programme_start_date = all_of(programme_start_source_field),
@@ -247,7 +259,20 @@ monthly_data <- read_csv(monthly_data_file, show_col_types = FALSE) |>
   ) |>
   mutate(programme_start_date = as.Date(programme_start_date))
 
-site_lookup <- read_csv(enrolment_data_file, show_col_types = FALSE) |>
+site_lookup_raw <- read_csv(
+  enrolment_data_file,
+  col_types = cols(uniqueid = col_character()),
+  show_col_types = FALSE
+)
+site_lookup_order <- if ("_id" %in% names(site_lookup_raw)) {
+  suppressWarnings(as.numeric(site_lookup_raw[["_id"]]))
+} else {
+  seq_len(nrow(site_lookup_raw))
+}
+site_lookup <- site_lookup_raw |>
+  mutate(.canonical_order = coalesce(site_lookup_order, as.numeric(row_number()))) |>
+  arrange(uniqueid, desc(.canonical_order)) |>
+  distinct(uniqueid, .keep_all = TRUE) |>
   transmute(
     participant_id = uniqueid,
     organization,
@@ -294,9 +319,47 @@ if (length(missing_daily) + length(missing_monthly) > 0) {
        "; monthly: ", paste(missing_monthly, collapse = ", "))
 }
 
+# Entirely unanswered columns in a sparse Kobo export are written as blank CSV
+# columns, which readr may infer as logical. Normalise the analysis schema here
+# so empty text and coded-response fields retain their intended types.
+as_numeric_code <- function(value) {
+  suppressWarnings(as.numeric(as.character(value)))
+}
+daily_numeric_fields <- c(
+  "menstrual_bleeding_yesterday", "bleeding_expected_yesterday",
+  "bleeding_amount_yesterday", "bleeding_amount_expected_yesterday",
+  "menstrual_pain_yesterday", "pain_expected_yesterday",
+  "pain_amount_yesterday", "pain_amount_expected_yesterday",
+  "pain_duration_yesterday"
+)
+monthly_numeric_fields <- c(
+  "menstrual_bleeding_last_month", "menstrual_pain_last_month", "clots_last_month",
+  "bleeding_days_change", "bleeding_spacing_change", "bleeding_amount_change",
+  "bleeding_start_predictability", "bleeding_stop_predictability",
+  "bleeding_color_change", "bleeding_smell_change", "clot_number_change",
+  "clot_size_change", "pain_severity_change", "pain_days_change",
+  "pain_location_change", "bleeding_management_impact", "pain_management_impact",
+  "bleeding_daily_activities_impact", "pain_daily_activities_impact"
+)
+
+daily_data <- daily_data |>
+  mutate(
+    participant_id = as.character(participant_id),
+    pain_locations_yesterday = as.character(pain_locations_yesterday),
+    across(any_of(daily_numeric_fields), as_numeric_code)
+  )
+monthly_data <- monthly_data |>
+  mutate(
+    participant_id = as.character(participant_id),
+    reference_month = as.character(reference_month),
+    bleeding_product_material = as.character(bleeding_product_material),
+    across(any_of(c("bleeding_product_material_other")), as.character),
+    across(any_of(monthly_numeric_fields), as_numeric_code)
+  )
+
 n_participants <- n_distinct(c(daily_data$participant_id, monthly_data$participant_id))
-if (n_participants == 0 || nrow(daily_data) == 0 || nrow(monthly_data) == 0) {
-  stop("Both datasets must contain records.")
+if (n_participants == 0 || nrow(daily_data) == 0) {
+  stop("The daily dataset must contain at least one participant record.")
 }
 
 n_daily_submissions <- nrow(daily_data)
@@ -402,6 +465,24 @@ clustered_factor_summary <- function(
     response_levels <- sort(unique(na.omit(as.character(response_factor))))
   }
 
+  # Conditional questionnaire sections can legitimately have no eligible
+  # records in early or sparse data. Preserve their category rows, but mark the
+  # percentage and interval unavailable because the relevant denominator is 0.
+  if (nrow(data) == 0 || length(unique(data$participant_id)) == 0) {
+    output <- tibble(
+      response_order = seq_along(response_levels),
+      response = response_levels,
+      count = 0L,
+      denominator = 0L,
+      percent = NA_real_,
+      ci_low = NA_real_,
+      ci_high = NA_real_,
+      question = question
+    )
+    names(output)[names(output) == "count"] <- count_name
+    return(output)
+  }
+
   cluster_ids <- sort(unique(data$participant_id))
   cluster_index <- match(data$participant_id, cluster_ids)
   denominator_by_cluster <- tabulate(cluster_index, nbins = length(cluster_ids))
@@ -445,6 +526,13 @@ summarise_response <- function(data, variable, question) {
 
 summarise_response_by_site <- function(data, variable, question) {
   site_names <- unique(na.omit(as.character(data$site)))
+  if (length(site_names) == 0) {
+    return(tibble(
+      response_order = integer(), response = character(), participants = integer(),
+      denominator = integer(), percent = double(), ci_low = double(),
+      ci_high = double(), question = character(), site = character()
+    ))
+  }
   bind_rows(lapply(site_names, function(site_name) {
     summarise_response(
       filter(data, as.character(site) == site_name),
@@ -542,7 +630,8 @@ region_results <- daily_data |>
   mutate(region = combine_regions(region)) |>
   distinct(participant_id, region) |>
   count(region, name = "participants") |>
-  right_join(tibble(region = all_symmetric_regions), by = "region") |>
+  mutate(region = as.character(region)) |>
+  right_join(tibble(region = as.character(all_symmetric_regions)), by = "region") |>
   mutate(participants = replace_na(participants, 0L)) |>
   mutate(percent = participants / n_participants * 100) |>
   arrange(desc(percent), region)
@@ -557,7 +646,8 @@ region_results_detailed <- daily_data |>
   filter(!is.na(region), region != "") |>
   distinct(participant_id, region) |>
   count(region, name = "participants") |>
-  right_join(tibble(region = all_detailed_regions), by = "region") |>
+  mutate(region = as.character(region)) |>
+  right_join(tibble(region = as.character(all_detailed_regions)), by = "region") |>
   mutate(participants = replace_na(participants, 0L)) |>
   mutate(percent = participants / n_participants * 100) |>
   arrange(desc(percent), region)

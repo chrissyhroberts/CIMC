@@ -14,6 +14,28 @@ execute:
   message: false
 ---
 
+```{r}
+#| label: epro-data-preflight
+#| results: asis
+
+preflight_config <- yaml::read_yaml("dashboard_config.yml")
+preflight_daily <- readr::read_csv(
+  preflight_config$files$daily_data,
+  show_col_types = FALSE
+)
+if (nrow(preflight_daily) == 0) {
+  cat(paste(
+    "## Linked ePRO results are not yet available\n\n",
+    "No CIMC submission currently has both a valid participant linkage and a ",
+    "programme start date. Any unlinked submissions remain visible in the ",
+    "protocol-monitoring section on page 1 and in its protected review CSV. ",
+    "This page will populate after a valid linked submission is received and ",
+    "the dashboard is rendered again.\n"
+  ))
+  knitr::knit_exit()
+}
+```
+
 {{< include _epro_shared.qmd >}}
 
 This page brings together checks that affect whether the monitoring and symptom results can be interpreted safely.
@@ -210,4 +232,3 @@ kable(data_quality, align = c("l", "r"))
 - Daily–monthly comparisons require a stable participant ID and a correctly aligned calendar month.
 - This is descriptive analysis. It does not test causal relationships or make clinical interpretations.
 - The dummy-data pain distribution is intentionally pelvic, abdominal, lumbosacral, breast, and head weighted for testing; it is illustrative and is not a clinical prevalence estimate.
-

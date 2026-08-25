@@ -20,8 +20,30 @@ library(yaml)
 library(htmltools)
 
 config <- read_yaml("dashboard_config.yml")
-enrolment <- read_csv(config$files$enrolment, show_col_types = FALSE)
-recruitment <- read_csv(config$files$recruitment, show_col_types = FALSE)
+id_column_type <- cols(uniqueid = col_character())
+enrolment <- read_csv(
+  config$files$enrolment, col_types = id_column_type, show_col_types = FALSE
+)
+recruitment <- read_csv(
+  config$files$recruitment, col_types = id_column_type, show_col_types = FALSE
+)
+
+canonical_latest_record <- function(data) {
+  source_order <- seq_len(nrow(data))
+  kobo_order <- if ("_id" %in% names(data)) {
+    suppressWarnings(as.numeric(data[["_id"]]))
+  } else {
+    rep(NA_real_, nrow(data))
+  }
+  data |>
+    mutate(.canonical_order = coalesce(kobo_order, as.numeric(source_order))) |>
+    arrange(uniqueid, desc(.canonical_order)) |>
+    distinct(uniqueid, .keep_all = TRUE) |>
+    select(-.canonical_order)
+}
+
+enrolment <- canonical_latest_record(enrolment)
+recruitment <- canonical_latest_record(recruitment)
 site_labels <- unlist(config$labels$sites)
 age_group_breaks <- unlist(config$demographics$age_group_breaks)
 age_group_labels <- unlist(config$demographics$age_group_labels)
@@ -52,8 +74,15 @@ method_labels <- c(
 
 enrolment <- enrolment |>
   mutate(
-    enrollment_date = as.Date(enrollment_date),
-    contraception_start_date = as.Date(contraception_start_date),
+    enrollment_date = as.Date(as.character(enrollment_date)),
+    contraception_start_date = as.Date(as.character(contraception_start_date)),
+    age = as.numeric(age),
+    days_since_contraception_start = as.numeric(days_since_contraception_start),
+    across(
+      c(organization, education_level, contraceptive_method, partner_status_a,
+        partner_status_b, partner_status_c, daily_reminder_method),
+      as.character
+    ),
     site = factor(unname(site_labels[organization]), levels = unname(site_labels)),
     age_group = cut(
       age,

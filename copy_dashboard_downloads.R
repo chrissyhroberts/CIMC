@@ -10,6 +10,7 @@ action_files <- c(
   "eligible_not_enrolled_targets.csv",
   "enrolled_no_daily_submission_targets.csv",
   "monthly_report_due_targets.csv",
+  "protocol_deviation_violation_review.csv",
   "participant_progress_summary.csv"
 )
 development_files <- c(

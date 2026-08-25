@@ -14,6 +14,28 @@ execute:
   message: false
 ---
 
+```{r}
+#| label: epro-data-preflight
+#| results: asis
+
+preflight_config <- yaml::read_yaml("dashboard_config.yml")
+preflight_daily <- readr::read_csv(
+  preflight_config$files$daily_data,
+  show_col_types = FALSE
+)
+if (nrow(preflight_daily) == 0) {
+  cat(paste(
+    "## Linked ePRO results are not yet available\n\n",
+    "No CIMC submission currently has both a valid participant linkage and a ",
+    "programme start date. Any unlinked submissions remain visible in the ",
+    "protocol-monitoring section on page 1 and in its protected review CSV. ",
+    "This page will populate after a valid linked submission is received and ",
+    "the dashboard is rendered again.\n"
+  ))
+  knitr::knit_exit()
+}
+```
+
 {{< include _epro_shared.qmd >}}
 
 ## How to read this report
@@ -132,8 +154,11 @@ if (isTRUE(config$site_breakdowns$daily_symptom_prevalence)) {
     ) |>
     mutate(site = factor(site, levels = unname(site_labels)))
 
-  print(
-    ggplot(daily_site_results, aes(percent, site, fill = question)) +
+  if (nrow(daily_site_results) == 0) {
+    cat("No daily submissions currently have a study-site code matching `labels.sites` in `dashboard_config.yml`.\n")
+  } else {
+    print(
+      ggplot(daily_site_results, aes(percent, site, fill = question)) +
       geom_col(position = position_dodge(width = .72), width = .62) +
       geom_errorbar(
         aes(xmin = ci_low, xmax = ci_high),
@@ -154,8 +179,9 @@ if (isTRUE(config$site_breakdowns$daily_symptom_prevalence)) {
       labs(x = "Percent of daily submissions", y = NULL, fill = NULL,
            caption = "Whiskers are participant-clustered 95% confidence intervals within site.") +
       theme_minimal(base_size = 12) +
-      theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
-  )
+        theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+    )
+  }
 }
 ```
 

@@ -14,7 +14,46 @@ execute:
   message: false
 ---
 
+```{r}
+#| label: epro-data-preflight
+#| results: asis
+
+preflight_config <- yaml::read_yaml("dashboard_config.yml")
+preflight_daily <- readr::read_csv(
+  preflight_config$files$daily_data,
+  show_col_types = FALSE
+)
+if (nrow(preflight_daily) == 0) {
+  cat(paste(
+    "## Linked ePRO results are not yet available\n\n",
+    "No CIMC submission currently has both a valid participant linkage and a ",
+    "programme start date. Any unlinked submissions remain visible in the ",
+    "protocol-monitoring section on page 1 and in its protected review CSV. ",
+    "This page will populate after a valid linked submission is received and ",
+    "the dashboard is rendered again.\n"
+  ))
+  knitr::knit_exit()
+}
+```
+
 {{< include _epro_shared.qmd >}}
+
+```{r}
+#| label: monthly-data-availability
+#| results: asis
+
+if (nrow(monthly_data) == 0) {
+  cat(paste(
+    "## Monthly results are not yet available\n\n",
+    "The connected Kobo project contains no monthly participant records yet. ",
+    "This is expected during initial testing when the available submissions ",
+    "have not reached the monthly section. The daily and monitoring pages can ",
+    "still be reviewed; this page will populate automatically after an eligible ",
+    "monthly submission is received and the dashboard is rendered again.\n"
+  ))
+  knitr::knit_exit()
+}
+```
 
 ## Monthly questionnaire overview
 
@@ -310,8 +349,11 @@ if (isTRUE(config$site_breakdowns$monthly_symptom_occurrence)) {
     filter(response == "Yes") |>
     mutate(site = factor(site, levels = unname(site_labels)))
 
-  print(
-    ggplot(monthly_site_occurrence, aes(percent, site, fill = question)) +
+  if (nrow(monthly_site_occurrence) == 0) {
+    cat("No monthly submissions currently have a study-site code matching `labels.sites` in `dashboard_config.yml`.\n")
+  } else {
+    print(
+      ggplot(monthly_site_occurrence, aes(percent, site, fill = question)) +
       geom_col(position = position_dodge(width = .78), width = .68) +
       geom_errorbar(
         aes(xmin = ci_low, xmax = ci_high), orientation = "y",
@@ -325,8 +367,9 @@ if (isTRUE(config$site_breakdowns$monthly_symptom_occurrence)) {
       labs(x = "Percent within relevant participant-months", y = NULL, fill = NULL,
            caption = "Whiskers are participant-clustered 95% confidence intervals within site.") +
       theme_minimal(base_size = 12) +
-      theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
-  )
+        theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+    )
+  }
 }
 ```
 
@@ -863,18 +906,30 @@ ggplot(consistency_plot, aes(percent, daily_report)) +
 #| fig-width: 13
 
 if (isTRUE(config$site_breakdowns$daily_monthly_consistency)) {
-  consistency_by_site <- bind_rows(lapply(unique(na.omit(as.character(linked_months$site))), function(site_name) {
-    site_months <- filter(linked_months, as.character(site) == site_name)
-    bind_rows(
-      summarise_consistency(site_months, "daily_any_bleeding", "menstrual_bleeding_last_month", "Bleeding"),
-      summarise_consistency(site_months, "daily_any_pain", "menstrual_pain_last_month", "Pain")
-    ) |>
-      mutate(site = site_name)
-  })) |>
+  consistency_site_names <- unique(na.omit(as.character(linked_months$site)))
+  if (length(consistency_site_names) == 0) {
+    consistency_by_site <- tibble(
+      records = integer(), percent = double(), ci_low = double(), ci_high = double(),
+      symptom = character(), daily_report = character(), site = character()
+    )
+  } else {
+    consistency_by_site <- bind_rows(lapply(consistency_site_names, function(site_name) {
+      site_months <- filter(linked_months, as.character(site) == site_name)
+      bind_rows(
+        summarise_consistency(site_months, "daily_any_bleeding", "menstrual_bleeding_last_month", "Bleeding"),
+        summarise_consistency(site_months, "daily_any_pain", "menstrual_pain_last_month", "Pain")
+      ) |>
+        mutate(site = site_name)
+    }))
+  }
+  consistency_by_site <- consistency_by_site |>
     mutate(site = factor(site, levels = unname(site_labels)))
 
-  print(
-    ggplot(consistency_by_site, aes(percent, daily_report)) +
+  if (nrow(consistency_by_site) == 0) {
+    cat("No linked daily–monthly records currently have a study-site code matching `labels.sites` in `dashboard_config.yml`.\n")
+  } else {
+    print(
+      ggplot(consistency_by_site, aes(percent, daily_report)) +
       geom_col(fill = "#167c77", width = .62) +
       geom_errorbar(aes(xmin = ci_low, xmax = ci_high), orientation = "y", height = .16, linewidth = .45) +
       geom_text(
@@ -891,9 +946,10 @@ if (isTRUE(config$site_breakdowns$daily_monthly_consistency)) {
       labs(x = "Percent reporting symptom in monthly form", y = NULL,
            caption = "Whiskers are participant-clustered 95% confidence intervals within site.") +
       theme_minimal(base_size = 11) +
-      theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
-            strip.text.y = element_text(angle = 0), plot.margin = margin(8, 42, 8, 8))
-  )
+        theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+              strip.text.y = element_text(angle = 0), plot.margin = margin(8, 42, 8, 8))
+    )
+  }
 }
 ```
 

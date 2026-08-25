@@ -164,9 +164,32 @@ require_fields <- function(data, fields, dataset_name) {
   }
 }
 
+require_any_field <- function(data, fields, dataset_name, purpose) {
+  if (!any(fields %in% names(data))) {
+    stop(
+      dataset_name, " must contain at least one of: ", paste(fields, collapse = ", "),
+      " (", purpose, "). Check the Kobo asset UID and deployed form version."
+    )
+  }
+}
+
 add_optional_fields <- function(data, fields) {
   for (field in setdiff(fields, names(data))) data[[field]] <- NA
   data
+}
+
+canonical_latest_by_uniqueid <- function(data) {
+  source_order <- seq_len(nrow(data))
+  kobo_order <- if ("_id" %in% names(data)) {
+    suppressWarnings(as.numeric(data[["_id"]]))
+  } else {
+    rep(NA_real_, nrow(data))
+  }
+  data |>
+    mutate(.canonical_order = coalesce(kobo_order, as.numeric(source_order))) |>
+    arrange(uniqueid, desc(.canonical_order)) |>
+    distinct(uniqueid, .keep_all = TRUE) |>
+    select(-.canonical_order)
 }
 
 derive_epro_files <- function(enrolment, cimc) {
@@ -177,8 +200,14 @@ derive_epro_files <- function(enrolment, cimc) {
   )
   require_fields(
     cimc,
-    c("uniqueid", "date", "Q101", "Q105", "monthly_report_due", "Q201", "Q211", "Q214"),
+    c("uniqueid", "Q101", "Q105", "monthly_report_due"),
     "CIMC submissions"
+  )
+  require_any_field(
+    cimc,
+    c("date", "_submission_time"),
+    "CIMC submissions",
+    "report date"
   )
 
   daily_optional <- c(
@@ -190,21 +219,51 @@ derive_epro_files <- function(enrolment, cimc) {
     "Q207", "Q208", "Q210", "Q212", "Q213", "Q215", "Q216", "Q217",
     "Q218", "Q219", "Q220", "Q221", "QA", "QB"
   )
-  cimc <- add_optional_fields(cimc, c(daily_optional, monthly_optional))
+  # Kobo's JSON data endpoint returns the fields present in the downloaded
+  # submissions. If every early test submission skips the monthly section,
+  # even core monthly questions may therefore be absent from the response.
+  cimc <- add_optional_fields(
+    cimc,
+    c("date", "Q201", "Q211", "Q214", daily_optional, monthly_optional)
+  )
+
+  cimc <- cimc |>
+    mutate(
+      uniqueid = as.character(uniqueid),
+      # A few test submissions can omit the form's calculated date field. CIMC
+      # reports describe the preceding day, so use the day before submission.
+      date = coalesce(
+        as.Date(as.character(date)),
+        as.Date(substr(as.character(`_submission_time`), 1, 10)) - 1
+      )
+    )
+  if (any(is.na(cimc$date))) {
+    stop("Some CIMC submissions have neither a report date nor a usable submission timestamp.")
+  }
+  staged_cimc <- cimc
 
   programme_dates <- enrolment |>
+    canonical_latest_by_uniqueid() |>
     transmute(
       uniqueid = as.character(uniqueid),
-      programme_start_date = as.Date(contraception_start_date)
+      programme_start_date = as.Date(contraception_start_date),
+      enrolment_record_present = TRUE
     ) |>
     distinct(uniqueid, .keep_all = TRUE)
 
   cimc <- cimc |>
-    mutate(uniqueid = as.character(uniqueid), date = as.Date(date)) |>
     left_join(programme_dates, by = "uniqueid")
-  if (any(is.na(cimc$programme_start_date))) {
-    stop("Some CIMC submissions could not be linked to an enrolment programme start date.")
+  excluded_from_analysis <- cimc |>
+    filter(is.na(enrolment_record_present) | is.na(programme_start_date))
+  if (nrow(excluded_from_analysis) > 0) {
+    warning(
+      nrow(excluded_from_analysis),
+      " CIMC submission(s) have no linked enrolment programme start date. ",
+      "They remain in the raw monitoring data but are excluded from symptom analyses."
+    )
   }
+  cimc <- cimc |>
+    filter(!is.na(enrolment_record_present), !is.na(programme_start_date))
 
   daily <- cimc |>
     transmute(
@@ -255,7 +314,7 @@ derive_epro_files <- function(enrolment, cimc) {
       method_stop_date = QB
     )
 
-  list(daily_data = daily, monthly_data = monthly)
+  list(cimc = staged_cimc, daily_data = daily, monthly_data = monthly)
 }
 
 stage_production_data <- function() {
@@ -290,7 +349,33 @@ stage_production_data <- function() {
     "Enrolment submissions"
   )
 
+  # Kobo omits a JSON field when none of the downloaded records contains it.
+  # Add the optional fields used by pages 1 and 2 so sparse early test data has
+  # the same analysis-ready schema as a mature production export.
+  downloaded$recruitment <- add_optional_fields(
+    downloaded$recruitment,
+    c(
+      "enrollment_date", "phone", "email", "reminder", "notes",
+      "prior_participation", "screening_consent", "age_18_49",
+      "currently_pregnant", "pregnant_last_6_weeks", "currently_breastfeeding",
+      "periods_returned", "current_contraception", "started_last_74_days",
+      "method_eligible", "same_method_before_insertion",
+      "non_contraceptive_hormones", "personal_smartphone",
+      "personal_smartphone_90_days", "language_ability"
+    )
+  )
+  downloaded$enrolment <- add_optional_fields(
+    downloaded$enrolment,
+    c(
+      "phone", "email", "age", "education_level", "contraceptive_method",
+      "days_since_contraception_start", "partner_status_a", "partner_status_b",
+      "partner_status_c", "daily_reminder_method", "missed_days_reminder_method"
+    )
+  )
+
   derived <- derive_epro_files(downloaded$enrolment, downloaded$cimc)
+  downloaded$cimc <- derived$cimc
+  derived$cimc <- NULL
   prepared <- c(downloaded, derived)
   for (name in names(prepared)) {
     write_csv(prepared[[name]], runtime_files[[name]], na = "")

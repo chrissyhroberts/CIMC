@@ -23,9 +23,16 @@ library(htmltools)
 library(patchwork)
 
 config <- read_yaml("dashboard_config.yml")
-recruitment <- read_csv(config$files$recruitment, show_col_types = FALSE)
-enrolment <- read_csv(config$files$enrolment, show_col_types = FALSE)
-cimc <- read_csv(config$files$cimc, show_col_types = FALSE)
+id_column_type <- cols(uniqueid = col_character())
+recruitment <- read_csv(
+  config$files$recruitment, col_types = id_column_type, show_col_types = FALSE
+)
+enrolment <- read_csv(
+  config$files$enrolment, col_types = id_column_type, show_col_types = FALSE
+)
+cimc <- read_csv(
+  config$files$cimc, col_types = id_column_type, show_col_types = FALSE
+)
 refresh_metadata <- read_csv(config$files$refresh_metadata, show_col_types = FALSE)
 
 data_mode <- tolower(config$data_source$mode)
@@ -44,8 +51,9 @@ followup_complete_label <- paste0("Reached day ", expected_study_days)
 
 recruitment <- recruitment |>
   mutate(
+    uniqueid = as.character(uniqueid),
     recruitment_date = as.Date(recruitment_date),
-    planned_enrollment_date = as.Date(enrollment_date),
+    planned_enrollment_date = as.Date(as.character(enrollment_date)),
     phone = as.character(phone),
     email = as.character(email),
     site = factor(unname(site_labels[organization]), levels = unname(site_labels))
@@ -53,19 +61,175 @@ recruitment <- recruitment |>
 
 enrolment <- enrolment |>
   mutate(
-    enrollment_date = as.Date(enrollment_date),
-    contraception_start_date = as.Date(contraception_start_date),
+    uniqueid = as.character(uniqueid),
+    enrollment_date = as.Date(as.character(enrollment_date)),
+    contraception_start_date = as.Date(as.character(contraception_start_date)),
     phone = as.character(phone),
     email = as.character(email),
+    daily_reminder_method = as.character(daily_reminder_method),
+    missed_days_reminder_method = as.character(missed_days_reminder_method),
     site = factor(unname(site_labels[organization]), levels = unname(site_labels))
   )
 
+# Preserve every submitted record for protocol monitoring, but use one current
+# record per participant for operational calculations. Kobo's numeric `_id`
+# increases with each submission; the highest ID is treated as the current row.
+canonical_latest_record <- function(data) {
+  source_order <- seq_len(nrow(data))
+  kobo_order <- if ("_id" %in% names(data)) {
+    suppressWarnings(as.numeric(data[["_id"]]))
+  } else {
+    rep(NA_real_, nrow(data))
+  }
+  data |>
+    mutate(.canonical_order = coalesce(kobo_order, as.numeric(source_order))) |>
+    arrange(uniqueid, desc(.canonical_order)) |>
+    distinct(uniqueid, .keep_all = TRUE) |>
+    select(-.canonical_order)
+}
+
+recruitment_records <- recruitment
+enrolment_records <- enrolment
+recruitment <- canonical_latest_record(recruitment_records)
+enrolment <- canonical_latest_record(enrolment_records)
+
 cimc <- cimc |>
-  mutate(date = as.Date(date), method_stop_date = as.Date(QB)) |>
+  mutate(
+    uniqueid = as.character(uniqueid),
+    date = as.Date(as.character(date)),
+    method_stop_date = as.Date(as.character(QB))
+  ) |>
   left_join(
-    enrolment |> select(uniqueid, organization, site),
+    enrolment |>
+      transmute(
+        uniqueid, organization, site, enrollment_date,
+        programme_start_date = contraception_start_date,
+        enrolment_record_present = TRUE
+      ),
     by = "uniqueid"
   )
+
+# Automated protocol flags are screening signals for study-team adjudication.
+# They deliberately use exact participant-ID matching so linkage problems are
+# visible rather than silently corrected.
+protocol_rules <- config$protocol_monitoring$rules
+empty_protocol_review <- tibble(
+  participant_id = character(), classification = character(), flag_code = character(),
+  issue = character(), source_form = character(), record_date = as.Date(character()),
+  site = character(), records = integer(), detail = character(),
+  suggested_action = character(), review_status = character()
+)
+
+make_protocol_flags <- function(data, code, issue, source_form, detail, suggested_action) {
+  rule <- protocol_rules[[code]]
+  if (is.null(rule) || !isTRUE(rule$enabled) || nrow(data) == 0) {
+    return(empty_protocol_review)
+  }
+  severity <- tolower(rule$severity)
+  if (!severity %in% c("deviation", "violation")) {
+    stop("Protocol rule ", code, " severity must be 'deviation' or 'violation'.")
+  }
+  data |>
+    transmute(
+      participant_id = as.character(uniqueid),
+      classification = if_else(
+        severity == "violation", "Potential violation", "Potential deviation"
+      ),
+      flag_code = code,
+      issue = issue,
+      source_form = source_form,
+      record_date = as.Date(record_date),
+      site = as.character(site),
+      records = as.integer(records),
+      detail = detail,
+      suggested_action = suggested_action,
+      review_status = "Needs review"
+    )
+}
+
+protocol_review <- bind_rows(
+  make_protocol_flags(
+    cimc |>
+      filter(is.na(enrolment_record_present)) |>
+      distinct(uniqueid, date, .keep_all = TRUE) |>
+      transmute(uniqueid, record_date = date, site, records = 1L),
+    "cimc_without_enrolment",
+    "CIMC submission has no matching enrolment record",
+    "CIMC",
+    "The participant ID was present in CIMC but absent from enrolment.",
+    "Verify the ID and enrolment history; document and adjudicate the event."
+  ),
+  make_protocol_flags(
+    enrolment |>
+      filter(is.na(contraception_start_date)) |>
+      transmute(uniqueid, record_date = enrollment_date, site, records = 1L),
+    "missing_programme_start_date",
+    "Enrolment has no valid programme start date",
+    "Enrolment",
+    "A programme start date is required to define follow-up and cycle timing.",
+    "Verify the source record and correct it through the approved data process."
+  ),
+  make_protocol_flags(
+    cimc |>
+      filter(!is.na(enrollment_date), !is.na(date), date < enrollment_date) |>
+      distinct(uniqueid, date, .keep_all = TRUE) |>
+      transmute(uniqueid, record_date = date, site, records = 1L),
+    "cimc_before_enrolment",
+    "CIMC report is dated before enrolment",
+    "CIMC",
+    "The report date precedes the linked participant's enrolment date.",
+    "Check form dates, time zone, participant ID, and whether follow-up began early."
+  ),
+  make_protocol_flags(
+    cimc |>
+      count(uniqueid, date, site, name = "records") |>
+      filter(records > 1) |>
+      transmute(uniqueid, record_date = date, site, records),
+    "duplicate_cimc_participant_date",
+    "More than one CIMC submission for a participant-day",
+    "CIMC",
+    "Multiple submissions share the same participant ID and report date.",
+    "Determine whether this is a correction, duplicate, or additional submission."
+  ),
+  make_protocol_flags(
+    enrolment_records |>
+      count(uniqueid, name = "records") |>
+      filter(records > 1) |>
+      left_join(
+        enrolment |>
+          transmute(uniqueid, record_date = enrollment_date, site),
+        by = "uniqueid"
+      ) |>
+      transmute(uniqueid, record_date, site, records),
+    "duplicate_enrolment_participant",
+    "More than one enrolment submission for a participant",
+    "Enrolment",
+    "Multiple enrolment records share the same participant ID.",
+    "Verify whether the later record is an authorised correction and adjudicate the duplicate."
+  ),
+  make_protocol_flags(
+    enrolment |>
+      anti_join(recruitment |> distinct(uniqueid), by = "uniqueid") |>
+      transmute(uniqueid, record_date = enrollment_date, site, records = 1L),
+    "enrolment_without_recruitment",
+    "Enrolment has no matching recruitment record",
+    "Enrolment",
+    "The participant ID was present in enrolment but absent from recruitment.",
+    "Verify recruitment history and participant ID; adjudicate against the protocol."
+  )
+) |>
+  arrange(factor(classification, c("Potential violation", "Potential deviation")),
+          issue, participant_id, record_date)
+
+protocol_summary <- protocol_review |>
+  group_by(classification, issue) |>
+  summarise(
+    participants = n_distinct(participant_id),
+    flagged_records = sum(records),
+    .groups = "drop"
+  ) |>
+  arrange(factor(classification, c("Potential violation", "Potential deviation")),
+          desc(participants), issue)
 
 method_stops <- cimc |>
   filter(QA == 0, !is.na(method_stop_date)) |>
@@ -233,6 +397,7 @@ write_csv(reminder_targets, "reminder_targets_3_consecutive_missed_days.csv", na
 write_csv(eligible_not_enrolled, "eligible_not_enrolled_targets.csv", na = "")
 write_csv(no_daily_targets, "enrolled_no_daily_submission_targets.csv", na = "")
 write_csv(monthly_due_targets, "monthly_report_due_targets.csv", na = "")
+write_csv(protocol_review, "protocol_deviation_violation_review.csv", na = "")
 write_csv(
   progress |>
     transmute(
@@ -250,6 +415,9 @@ n_eligible <- sum(recruitment$eligibility_status == "eligible", na.rm = TRUE)
 n_enrolled <- nrow(enrolment)
 n_active <- sum(progress$status == "Active follow-up")
 n_reached_followup <- sum(progress$status == followup_complete_label)
+n_protocol_participants <- n_distinct(protocol_review$participant_id)
+n_potential_violations <- sum(protocol_review$classification == "Potential violation")
+n_potential_deviations <- sum(protocol_review$classification == "Potential deviation")
 overall_daily_completion <- sum(progress$daily_reports_received) / sum(progress$expected_daily_reports)
 overall_monthly_completion <- sum(progress$monthly_reports_received) / sum(progress$expected_monthly_reports)
 ```
@@ -287,10 +455,71 @@ cards <- tags$div(
   kpi("Daily completion", percent(overall_daily_completion, accuracy = .1), "Reports received / expected"),
   kpi("Monthly completion", percent(overall_monthly_completion, accuracy = .1), "Due monthly sections"),
   kpi("Reminder targets", comma(nrow(reminder_targets)), paste0("≥", missed_days_threshold, " consecutive missed days")),
+  kpi("Protocol flags", comma(nrow(protocol_review)), paste(comma(n_protocol_participants), "participant(s)")),
   kpi("Data source", str_to_title(data_mode), data_prepared_at)
 )
 
 cat("```{=html}\n", as.character(cards), "\n```\n", sep = "")
+```
+
+## Potential protocol deviations and violations
+
+**What it shows.** This section screens linked study forms for records that may represent a protocol deviation or violation. The supplied rules include CIMC reports without enrolment, missing programme start dates, reports dated before enrolment, duplicate participant-days, duplicate enrolments, and enrolments without recruitment records.
+
+**How it is calculated.** Exact participant IDs and recorded dates are compared across recruitment, enrolment, and CIMC submissions. Each rule and its provisional classification are controlled in `dashboard_config.yml`. CIMC submissions without a valid linked programme start remain in this monitoring register but are excluded from symptom and cycle analyses.
+
+**Why it helps.** A linkage problem should create an actionable signal rather than prevent the dashboard from rendering. These are **potential** events: the dashboard does not determine seriousness, causality, or reportability. The study team must verify source records and adjudicate each flag under the approved protocol and deviation-management procedures.
+
+```{r}
+#| label: protocol-monitoring-summary
+#| results: asis
+
+protocol_cards <- tags$div(
+  class = "monitor-kpis",
+  kpi("Potential violations", comma(n_potential_violations), "Flagged records requiring review"),
+  kpi("Potential deviations", comma(n_potential_deviations), "Flagged records requiring review"),
+  kpi("Participants flagged", comma(n_protocol_participants), "Unique IDs across all flags")
+)
+cat("```{=html}\n", as.character(protocol_cards), "\n```\n", sep = "")
+
+if (nrow(protocol_summary) == 0) {
+  cat("No potential protocol deviations or violations were detected by the configured checks.\n")
+} else {
+  summary_table <- protocol_summary |>
+    rename(
+      Classification = classification,
+      `Automated screening flag` = issue,
+      Participants = participants,
+      `Flagged records` = flagged_records
+    ) |>
+    kable(format = "html", align = c("l", "l", "r", "r"))
+  cat('<div class="monitor-table-scroll protocol-summary-table">', summary_table, '</div>', sep = "\n")
+}
+```
+
+The participant-level review file is regenerated on every render as `protocol_deviation_violation_review.csv`. In production, it remains in the protected project folder and is not copied into the publishable `docs/` site unless publication of action lists has been explicitly enabled.
+
+```{r}
+#| label: protocol-monitoring-preview
+#| results: asis
+
+if (publish_action_lists && nrow(protocol_review) > 0) {
+  protocol_preview <- protocol_review |>
+    slice_head(n = config$monitoring$action_list_preview_rows) |>
+    transmute(
+      `Participant ID` = participant_id,
+      Classification = classification,
+      Issue = issue,
+      Form = source_form,
+      Date = record_date,
+      Site = site,
+      Status = review_status
+    ) |>
+    kable(format = "html", align = c("l", "l", "l", "l", "l", "l", "l"))
+  cat('<div class="monitor-table-scroll">', protocol_preview, '</div>', sep = "\n")
+} else if (!publish_action_lists && nrow(protocol_review) > 0) {
+  cat("Participant-level details are hidden from the rendered production site. Use the protected review CSV for follow-up.\n")
+}
 ```
 
 ## Recruitment funnel
@@ -555,6 +784,11 @@ downloads <- tags$div(
     "Overdue monthly sections", nrow(monthly_due_targets),
     "monthly_report_due_targets.csv",
     "Calendar-month sections still missing after the configured grace period"
+  ),
+  download_card(
+    "Protocol deviation/violation review", nrow(protocol_review),
+    "protocol_deviation_violation_review.csv",
+    "Automated cross-form flags requiring study-team verification and adjudication"
   ),
   download_card(
     "Full participant progress", nrow(progress),

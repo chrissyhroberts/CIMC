@@ -405,41 +405,46 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Decide when someone appears on a reminder or follow-up list</td>
 </tr>
 <tr class="even">
+<td><code>protocol_monitoring</code></td>
+<td>Cross-form screening rules and provisional classifications</td>
+<td>Enable, disable, or classify potential protocol deviations and violations</td>
+</tr>
+<tr class="odd">
 <td><code>demographics</code></td>
 <td>Age and initiation-time groupings</td>
 <td>Change category boundaries and labels on page 2</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>site_breakdowns</code></td>
 <td>Site-specific chart switches</td>
 <td>Show or suppress selected site comparisons</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>bodymap</code></td>
 <td>Pain-map titles and region limits</td>
 <td>Display all regions or restrict long supporting results</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>cycle_inference</code></td>
 <td>Rules used to infer menstrual onset and cycles</td>
 <td>Decide whether spotting can start a cycle and set plausible onset intervals</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>display</code></td>
 <td>Programme, inferred-cycle, and cycle-day windows</td>
 <td>Control how much follow-up appears in charts</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>uncertainty</code></td>
 <td>Confidence interval settings</td>
 <td>Change the confidence level or number of participant bootstrap samples</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>labels</code></td>
 <td>Human-readable names</td>
 <td>Replace site codes with names shown to readers</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>dummy_data</code></td>
 <td>Development-data size and simulation settings</td>
 <td>Create a larger or different test dataset without affecting production data</td>
@@ -454,6 +459,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">mode</span><span class="kw">:</span><span class="at"> development</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Use <code>development</code> while testing with the dummy datasets. For live Kobo data, enter the correct server and asset UIDs under <code>data_source.production</code>, store the API token in the environment variable named by <code>api_token_environment_variable</code>, and then change the mode to <code>production</code>.</p>
 <p>The API token itself must <strong>not</strong> be written into <code>dashboard_config.yml</code> or committed to GitHub. Production action lists are also excluded from the rendered site by default because they can contain participant identifiers or contact information.</p>
+<p>During early live testing, Kobo may omit a question from its JSON response when every downloaded submission skipped that question. The importer therefore treats unanswered monthly outcome fields as empty rather than assuming the connected asset is wrong. When a test record lacks the form’s calculated report date, it uses the calendar day before the Kobo submission timestamp because CIMC questions describe “yesterday.” If no monthly records are yet due, the monthly page displays a “not yet available” explanation and will populate after the first eligible monthly submission. Participant identifiers and the core CIMC routing fields are still validated so an incorrect asset UID or incompatible form does not pass silently.</p>
 </section>
 <section id="settings-that-change-the-meaning-of-results" class="level3" data-number="6.1.4">
 <h3 data-number="6.1.4" class="anchored" data-anchor-id="settings-that-change-the-meaning-of-results"><span class="header-section-number">6.1.4</span> Settings that change the meaning of results</h3>

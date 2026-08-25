@@ -14,6 +14,28 @@ execute:
   message: false
 ---
 
+```{r}
+#| label: epro-data-preflight
+#| results: asis
+
+preflight_config <- yaml::read_yaml("dashboard_config.yml")
+preflight_daily <- readr::read_csv(
+  preflight_config$files$daily_data,
+  show_col_types = FALSE
+)
+if (nrow(preflight_daily) == 0) {
+  cat(paste(
+    "## Linked ePRO results are not yet available\n\n",
+    "No CIMC submission currently has both a valid participant linkage and a ",
+    "programme start date. Any unlinked submissions remain visible in the ",
+    "protocol-monitoring section on page 1 and in its protected review CSV. ",
+    "This page will populate after a valid linked submission is received and ",
+    "the dashboard is rendered again.\n"
+  ))
+  knitr::knit_exit()
+}
+```
+
 {{< include _epro_shared.qmd >}}
 
 ## Configuring the dashboard
@@ -56,6 +78,7 @@ monitoring:
 | `fields` | Source column names | Adapt the dashboard if an analysis-ready variable is renamed |
 | `study` | Dates, follow-up rules, site targets, and programme periods | Change denominators, expected submissions, or recruitment target displays |
 | `monitoring` | Operational alert thresholds | Decide when someone appears on a reminder or follow-up list |
+| `protocol_monitoring` | Cross-form screening rules and provisional classifications | Enable, disable, or classify potential protocol deviations and violations |
 | `demographics` | Age and initiation-time groupings | Change category boundaries and labels on page 2 |
 | `site_breakdowns` | Site-specific chart switches | Show or suppress selected site comparisons |
 | `bodymap` | Pain-map titles and region limits | Display all regions or restrict long supporting results |
@@ -77,6 +100,8 @@ data_source:
 Use `development` while testing with the dummy datasets. For live Kobo data, enter the correct server and asset UIDs under `data_source.production`, store the API token in the environment variable named by `api_token_environment_variable`, and then change the mode to `production`.
 
 The API token itself must **not** be written into `dashboard_config.yml` or committed to GitHub. Production action lists are also excluded from the rendered site by default because they can contain participant identifiers or contact information.
+
+During early live testing, Kobo may omit a question from its JSON response when every downloaded submission skipped that question. The importer therefore treats unanswered monthly outcome fields as empty rather than assuming the connected asset is wrong. When a test record lacks the form's calculated report date, it uses the calendar day before the Kobo submission timestamp because CIMC questions describe “yesterday.” If no monthly records are yet due, the monthly page displays a “not yet available” explanation and will populate after the first eligible monthly submission. Participant identifiers and the core CIMC routing fields are still validated so an incorrect asset UID or incompatible form does not pass silently.
 
 ### Settings that change the meaning of results
 
