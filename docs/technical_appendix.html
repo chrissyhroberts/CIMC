@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -154,7 +189,8 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul class="collapse">
-  <li><a href="#technical-appendix-detailed-ever-reported-pain-location-map" id="toc-technical-appendix-detailed-ever-reported-pain-location-map" class="nav-link active" data-scroll-target="#technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">6.1</span> Technical appendix: detailed ever-reported pain location map</a></li>
+  <li><a href="#configuring-the-dashboard" id="toc-configuring-the-dashboard" class="nav-link active" data-scroll-target="#configuring-the-dashboard"><span class="header-section-number">6.1</span> Configuring the dashboard</a></li>
+  <li><a href="#technical-appendix-detailed-ever-reported-pain-location-map" id="toc-technical-appendix-detailed-ever-reported-pain-location-map" class="nav-link" data-scroll-target="#technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">6.2</span> Technical appendix: detailed ever-reported pain location map</a></li>
   </ul>
 </nav>
     </div>
@@ -301,8 +337,150 @@ ul.task-list li input[type="checkbox"] {
   background: var(--bs-body-bg);
 }
 </style>
-<section id="technical-appendix-detailed-ever-reported-pain-location-map" class="level2" data-number="6.1">
-<h2 data-number="6.1" class="anchored" data-anchor-id="technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">6.1</span> Technical appendix: detailed ever-reported pain location map</h2>
+<section id="configuring-the-dashboard" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="configuring-the-dashboard"><span class="header-section-number">6.1</span> Configuring the dashboard</h2>
+<p>The dashboard’s study-specific settings are held in one file: <a href="dashboard_config.yml"><code>dashboard_config.yml</code></a>. This keeps choices such as study dates, site targets, reminder thresholds, cycle-inference rules, and display limits separate from the R analysis code.</p>
+<p><strong>What this means.</strong> Most routine adaptations should require a change to the configuration file followed by a fresh render—not edits scattered through the analysis pages.</p>
+<p><strong>Why it helps.</strong> Keeping assumptions in one clearly annotated file makes them easier to review with the study team, apply consistently across all pages, and record when the dashboard is updated.</p>
+<section id="safe-editing-workflow" class="level3" data-number="6.1.1">
+<h3 data-number="6.1.1" class="anchored" data-anchor-id="safe-editing-workflow"><span class="header-section-number">6.1.1</span> Safe editing workflow</h3>
+<ol type="1">
+<li>Make a copy of the current <code>dashboard_config.yml</code> before making a substantial change.</li>
+<li>Open the file in a plain-text editor and change only the value after the relevant colon.</li>
+<li>Keep the existing indentation. YAML uses spaces to show which settings belong together; tabs should not be used.</li>
+<li>Save the file, render the Quarto book again, and review the data-quality page as well as the chart affected by the change.</li>
+<li>Record analytically important changes—especially cycle rules, denominators, date cutoffs, and confidence levels—so results from different dashboard versions are not compared as if their definitions were identical.</li>
+</ol>
+<p>YAML values have a few conventions:</p>
+<ul>
+<li><code>true</code> and <code>false</code> turn options on or off.</li>
+<li><code>null</code> means no limit; for example, all pain regions are displayed.</li>
+<li>Text can be quoted, and dates should remain quoted in <code>YYYY-MM-DD</code> form.</li>
+<li>Proportions are written between 0 and 1, so <code>0.80</code> means 80%.</li>
+<li>Lists use square brackets, for example <code>[18, 24, 29, 34]</code>.</li>
+</ul>
+<p>For example, this changes the missed-daily-report alert from three consecutive days to four:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">monitoring</span><span class="kw">:</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">consecutive_missed_days</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="which-section-controls-what" class="level3" data-number="6.1.2">
+<h3 data-number="6.1.2" class="anchored" data-anchor-id="which-section-controls-what"><span class="header-section-number">6.1.2</span> Which section controls what?</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Configuration section</th>
+<th>What to edit there</th>
+<th>Examples of effects</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>data_source</code></td>
+<td>Development/production mode and Kobo connection settings</td>
+<td>Use dummy data or download current production data</td>
+</tr>
+<tr class="even">
+<td><code>files</code></td>
+<td>Analysis-ready file paths</td>
+<td>Point the R analysis to staged inputs and the body-map SVG</td>
+</tr>
+<tr class="odd">
+<td><code>fields</code></td>
+<td>Source column names</td>
+<td>Adapt the dashboard if an analysis-ready variable is renamed</td>
+</tr>
+<tr class="even">
+<td><code>study</code></td>
+<td>Dates, follow-up rules, site targets, and programme periods</td>
+<td>Change denominators, expected submissions, or recruitment target displays</td>
+</tr>
+<tr class="odd">
+<td><code>monitoring</code></td>
+<td>Operational alert thresholds</td>
+<td>Decide when someone appears on a reminder or follow-up list</td>
+</tr>
+<tr class="even">
+<td><code>demographics</code></td>
+<td>Age and initiation-time groupings</td>
+<td>Change category boundaries and labels on page 2</td>
+</tr>
+<tr class="odd">
+<td><code>site_breakdowns</code></td>
+<td>Site-specific chart switches</td>
+<td>Show or suppress selected site comparisons</td>
+</tr>
+<tr class="even">
+<td><code>bodymap</code></td>
+<td>Pain-map titles and region limits</td>
+<td>Display all regions or restrict long supporting results</td>
+</tr>
+<tr class="odd">
+<td><code>cycle_inference</code></td>
+<td>Rules used to infer menstrual onset and cycles</td>
+<td>Decide whether spotting can start a cycle and set plausible onset intervals</td>
+</tr>
+<tr class="even">
+<td><code>display</code></td>
+<td>Programme, inferred-cycle, and cycle-day windows</td>
+<td>Control how much follow-up appears in charts</td>
+</tr>
+<tr class="odd">
+<td><code>uncertainty</code></td>
+<td>Confidence interval settings</td>
+<td>Change the confidence level or number of participant bootstrap samples</td>
+</tr>
+<tr class="even">
+<td><code>labels</code></td>
+<td>Human-readable names</td>
+<td>Replace site codes with names shown to readers</td>
+</tr>
+<tr class="odd">
+<td><code>dummy_data</code></td>
+<td>Development-data size and simulation settings</td>
+<td>Create a larger or different test dataset without affecting production data</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="switching-between-dummy-and-production-data" class="level3" data-number="6.1.3">
+<h3 data-number="6.1.3" class="anchored" data-anchor-id="switching-between-dummy-and-production-data"><span class="header-section-number">6.1.3</span> Switching between dummy and production data</h3>
+<p>The controlling setting is:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data_source</span><span class="kw">:</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">mode</span><span class="kw">:</span><span class="at"> development</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Use <code>development</code> while testing with the dummy datasets. For live Kobo data, enter the correct server and asset UIDs under <code>data_source.production</code>, store the API token in the environment variable named by <code>api_token_environment_variable</code>, and then change the mode to <code>production</code>.</p>
+<p>The API token itself must <strong>not</strong> be written into <code>dashboard_config.yml</code> or committed to GitHub. Production action lists are also excluded from the rendered site by default because they can contain participant identifiers or contact information.</p>
+</section>
+<section id="settings-that-change-the-meaning-of-results" class="level3" data-number="6.1.4">
+<h3 data-number="6.1.4" class="anchored" data-anchor-id="settings-that-change-the-meaning-of-results"><span class="header-section-number">6.1.4</span> Settings that change the meaning of results</h3>
+<p>Some settings affect presentation only, while others change the underlying calculation. Changes to the following should be agreed and documented before results are compared over time:</p>
+<ul>
+<li><code>study.data_cutoff</code>, follow-up duration, and monthly due-day rules;</li>
+<li>participant ID, report-date, programme-start, or pain-location field mappings;</li>
+<li>any setting under <code>cycle_inference</code>;</li>
+<li>monitoring thresholds used to construct operational lists;</li>
+<li>demographic boundaries or site definitions;</li>
+<li>the confidence level and participant-bootstrap settings.</li>
+</ul>
+<p>By contrast, chart titles, the number of intersections displayed, and the visible chart window generally change presentation rather than the source records. A shorter display window can still hide later observations from view, so it should be described clearly.</p>
+</section>
+<section id="rebuilding-the-dashboard" class="level3" data-number="6.1.5">
+<h3 data-number="6.1.5" class="anchored" data-anchor-id="rebuilding-the-dashboard"><span class="header-section-number">6.1.5</span> Rebuilding the dashboard</h3>
+<p>After saving the configuration, render the complete Quarto project from the project folder. The pre-render step prepares either the dummy or Kobo data, the R code recalculates every page, and the completed HTML book is written to <code>docs/</code>.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Do not manually edit files inside <code>docs/</code>: they are generated outputs and will be replaced during the next render. If a render stops after a configuration change, first check spelling, indentation, quote pairing, and whether list labels and boundaries contain compatible numbers of entries.</p>
+</section>
+<section id="what-the-dashboard-is-written-in" class="level3" data-number="6.1.6">
+<h3 data-number="6.1.6" class="anchored" data-anchor-id="what-the-dashboard-is-written-in"><span class="header-section-number">6.1.6</span> What the dashboard is written in</h3>
+<p>All data preparation, statistical summaries, confidence intervals, tables, and plots are implemented in <strong>R</strong>. The report pages are <strong>Quarto</strong> documents (<code>.qmd</code>), while <code>dashboard_config.yml</code> supplies YAML settings. The published HTML also uses CSS for appearance and a small amount of JavaScript for interactive elements such as body-map hover labels. No Python analysis pipeline is used.</p>
+</section>
+</section>
+<section id="technical-appendix-detailed-ever-reported-pain-location-map" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">6.2</span> Technical appendix: detailed ever-reported pain location map</h2>
 <p>This version retains every original SVG region, including left/right and dorsal/ventral distinctions. Locations come only from pain-positive daily submissions; percentages use all unique participants as the denominator, and each participant contributes at most once per detailed region across the observation period.</p>
 <p><strong>What it answers.</strong> “Did this participant ever report pain in this exact anatomical region during follow-up?” Repeated reports in the same region do not increase that participant’s contribution.</p>
 <p><strong>Why it is in the appendix.</strong> The detailed map preserves laterality and body surface for clinical or instrument-development review, while the symmetric map earlier in the report provides the clearer primary summary.</p>

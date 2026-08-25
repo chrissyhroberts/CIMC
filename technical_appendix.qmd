@@ -16,6 +16,95 @@ execute:
 
 {{< include _epro_shared.qmd >}}
 
+## Configuring the dashboard
+
+The dashboard's study-specific settings are held in one file: [`dashboard_config.yml`](dashboard_config.yml). This keeps choices such as study dates, site targets, reminder thresholds, cycle-inference rules, and display limits separate from the R analysis code.
+
+**What this means.** Most routine adaptations should require a change to the configuration file followed by a fresh render—not edits scattered through the analysis pages.
+
+**Why it helps.** Keeping assumptions in one clearly annotated file makes them easier to review with the study team, apply consistently across all pages, and record when the dashboard is updated.
+
+### Safe editing workflow
+
+1. Make a copy of the current `dashboard_config.yml` before making a substantial change.
+2. Open the file in a plain-text editor and change only the value after the relevant colon.
+3. Keep the existing indentation. YAML uses spaces to show which settings belong together; tabs should not be used.
+4. Save the file, render the Quarto book again, and review the data-quality page as well as the chart affected by the change.
+5. Record analytically important changes—especially cycle rules, denominators, date cutoffs, and confidence levels—so results from different dashboard versions are not compared as if their definitions were identical.
+
+YAML values have a few conventions:
+
+- `true` and `false` turn options on or off.
+- `null` means no limit; for example, all pain regions are displayed.
+- Text can be quoted, and dates should remain quoted in `YYYY-MM-DD` form.
+- Proportions are written between 0 and 1, so `0.80` means 80%.
+- Lists use square brackets, for example `[18, 24, 29, 34]`.
+
+For example, this changes the missed-daily-report alert from three consecutive days to four:
+
+```yaml
+monitoring:
+  consecutive_missed_days: 4
+```
+
+### Which section controls what?
+
+| Configuration section | What to edit there | Examples of effects |
+|---|---|---|
+| `data_source` | Development/production mode and Kobo connection settings | Use dummy data or download current production data |
+| `files` | Analysis-ready file paths | Point the R analysis to staged inputs and the body-map SVG |
+| `fields` | Source column names | Adapt the dashboard if an analysis-ready variable is renamed |
+| `study` | Dates, follow-up rules, site targets, and programme periods | Change denominators, expected submissions, or recruitment target displays |
+| `monitoring` | Operational alert thresholds | Decide when someone appears on a reminder or follow-up list |
+| `demographics` | Age and initiation-time groupings | Change category boundaries and labels on page 2 |
+| `site_breakdowns` | Site-specific chart switches | Show or suppress selected site comparisons |
+| `bodymap` | Pain-map titles and region limits | Display all regions or restrict long supporting results |
+| `cycle_inference` | Rules used to infer menstrual onset and cycles | Decide whether spotting can start a cycle and set plausible onset intervals |
+| `display` | Programme, inferred-cycle, and cycle-day windows | Control how much follow-up appears in charts |
+| `uncertainty` | Confidence interval settings | Change the confidence level or number of participant bootstrap samples |
+| `labels` | Human-readable names | Replace site codes with names shown to readers |
+| `dummy_data` | Development-data size and simulation settings | Create a larger or different test dataset without affecting production data |
+
+### Switching between dummy and production data
+
+The controlling setting is:
+
+```yaml
+data_source:
+  mode: development
+```
+
+Use `development` while testing with the dummy datasets. For live Kobo data, enter the correct server and asset UIDs under `data_source.production`, store the API token in the environment variable named by `api_token_environment_variable`, and then change the mode to `production`.
+
+The API token itself must **not** be written into `dashboard_config.yml` or committed to GitHub. Production action lists are also excluded from the rendered site by default because they can contain participant identifiers or contact information.
+
+### Settings that change the meaning of results
+
+Some settings affect presentation only, while others change the underlying calculation. Changes to the following should be agreed and documented before results are compared over time:
+
+- `study.data_cutoff`, follow-up duration, and monthly due-day rules;
+- participant ID, report-date, programme-start, or pain-location field mappings;
+- any setting under `cycle_inference`;
+- monitoring thresholds used to construct operational lists;
+- demographic boundaries or site definitions;
+- the confidence level and participant-bootstrap settings.
+
+By contrast, chart titles, the number of intersections displayed, and the visible chart window generally change presentation rather than the source records. A shorter display window can still hide later observations from view, so it should be described clearly.
+
+### Rebuilding the dashboard
+
+After saving the configuration, render the complete Quarto project from the project folder. The pre-render step prepares either the dummy or Kobo data, the R code recalculates every page, and the completed HTML book is written to `docs/`.
+
+```bash
+quarto render
+```
+
+Do not manually edit files inside `docs/`: they are generated outputs and will be replaced during the next render. If a render stops after a configuration change, first check spelling, indentation, quote pairing, and whether list labels and boundaries contain compatible numbers of entries.
+
+### What the dashboard is written in
+
+All data preparation, statistical summaries, confidence intervals, tables, and plots are implemented in **R**. The report pages are **Quarto** documents (`.qmd`), while `dashboard_config.yml` supplies YAML settings. The published HTML also uses CSS for appearance and a small amount of JavaScript for interactive elements such as body-map hover labels. No Python analysis pipeline is used.
+
 ## Technical appendix: detailed ever-reported pain location map
 
 This version retains every original SVG region, including left/right and dorsal/ventral distinctions. Locations come only from pain-positive daily submissions; percentages use all unique participants as the denominator, and each participant contributes at most once per detailed region across the observation period.
