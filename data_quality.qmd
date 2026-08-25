@@ -1,0 +1,213 @@
+---
+title: "Data quality and analysis checks"
+subtitle: "Structural checks, inference flags, and interpretation notes"
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    code-summary: "Show R code"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+{{< include _epro_shared.qmd >}}
+
+This page brings together checks that affect whether the monitoring and symptom results can be interpreted safely.
+
+**What.** It counts duplicate records, skip-logic inconsistencies, unmatched body-map codes, and implausible or review-worthy inferred-cycle results.
+
+**How.** Each check is recalculated from the same configured inputs and cycle rules used on the analysis pages. A zero means that specific issue was not detected; it does not prove that the underlying data are error-free.
+
+**Why.** These checks help the study team separate a genuine symptom pattern from a form, linkage, missingness, or cycle-inference problem before drawing conclusions.
+
+```{r}
+#| label: programme-cycles-calculate
+#| include: false
+
+daily_cycle_flags <- daily_data |>
+  filter(report_date >= programme_start_date) |>
+  arrange(participant_id, report_date) |>
+  group_by(participant_id) |>
+  mutate(
+    blood_reported = menstrual_bleeding_yesterday == 1,
+    qualifying_onset_day = blood_reported &
+      (spotting_starts_cycle | bleeding_amount_yesterday >= 2),
+    next_calendar_day_observed = lead(report_date) == report_date + 1,
+    blood_reported_next_day = next_calendar_day_observed & lead(blood_reported),
+    confirmed_onset_candidate = qualifying_onset_day &
+      (!require_next_day_blood | blood_reported_next_day)
+  ) |>
+  ungroup()
+
+# Standard bleeding/spotting episodes are separated by the configured number
+# of blood-free days. Calendar gaps larger than one day make the boundary
+# uncertain, so they are not silently treated as observed blood-free days.
+episode_start_flags <- daily_cycle_flags |>
+  group_by(participant_id) |>
+  mutate(
+    first_blood_report = blood_reported & cumsum(blood_reported) == 1L,
+    preceding_days_observed_and_clear = case_when(
+      bleed_free_days_between_episodes == 1 ~
+        lag(report_date) == report_date - 1 & !lag(blood_reported),
+      bleed_free_days_between_episodes == 2 ~
+        lag(report_date) == report_date - 1 &
+          lag(report_date, 2) == report_date - 2 &
+          !lag(blood_reported) & !lag(blood_reported, 2),
+      TRUE ~ FALSE
+    ),
+    bleeding_episode_start = blood_reported &
+      (first_blood_report | preceding_days_observed_and_clear)
+  ) |>
+  ungroup()
+
+bleeding_episode_starts <- episode_start_flags |>
+  filter(bleeding_episode_start) |>
+  arrange(participant_id, report_date) |>
+  group_by(participant_id) |>
+  transmute(
+    participant_id,
+    programme_start_date,
+    bleeding_episode_number = row_number(),
+    episode_start_date = report_date
+  ) |>
+  ungroup()
+
+# Select confirmed onset candidates recursively so that a short intervening
+# event cannot block a later valid onset merely because it appeared in lag().
+select_separated_onsets <- function(data, minimum_days) {
+  if (nrow(data) == 0) return(data)
+  keep <- logical(nrow(data))
+  last_kept_date <- as.Date(NA)
+  for (index in seq_len(nrow(data))) {
+    current_date <- data$report_date[[index]]
+    if (is.na(last_kept_date) || as.integer(current_date - last_kept_date) >= minimum_days) {
+      keep[[index]] <- TRUE
+      last_kept_date <- current_date
+    }
+  }
+  data[keep, , drop = FALSE]
+}
+
+qualifying_bleeding_days <- daily_cycle_flags |>
+  filter(confirmed_onset_candidate) |>
+  arrange(participant_id, report_date) |>
+  group_by(participant_id) |>
+  group_modify(~ select_separated_onsets(.x, minimum_cycle_gap_days)) |>
+  ungroup() |>
+  transmute(
+    participant_id,
+    programme_start_date,
+    onset_date = report_date
+  ) |>
+  arrange(participant_id, onset_date) |>
+  group_by(participant_id) |>
+  mutate(
+    cycle_number = row_number(),
+    next_onset_date = lead(onset_date),
+    cycle_length = as.integer(next_onset_date - onset_date)
+  ) |>
+  ungroup()
+
+# Each daily report is assigned to one and only one programme cycle: the most
+# recent CD1, ending immediately before the next CD1.
+cycle_daily <- daily_data |>
+  inner_join(
+    qualifying_bleeding_days,
+    by = c("participant_id", "programme_start_date"),
+    relationship = "many-to-many"
+  ) |>
+  filter(
+    report_date >= onset_date,
+    is.na(next_onset_date) | report_date < next_onset_date
+  ) |>
+  mutate(cycle_day = as.integer(report_date - onset_date) + 1)
+
+completed_cycles <- qualifying_bleeding_days |>
+  filter(!is.na(cycle_length))
+```
+
+## Data-quality checks
+
+These checks identify structural problems that could invalidate interpretation—for example, duplicate records, skip-logic violations, unmatched SVG codes, or impossible cycle lengths. A zero means the specific issue was not found. Long inferred cycles are shown as review flags rather than errors because they may be genuine or may reflect an unobserved intervening onset.
+
+```{r}
+#| label: data-quality
+
+data_quality <- tibble(
+  Check = c(
+    "Daily: duplicate participant-date records",
+    "Daily: report dated before programme start",
+    "Daily: bleeding follow-up outside bleeding skip condition",
+    "Daily: pain follow-up outside pain skip condition",
+    "Monthly: duplicate participant-month records",
+    "Monthly: bleeding follow-up outside bleeding skip condition",
+    "Monthly: clot comparison outside clot skip condition",
+    "Monthly: pain comparison outside pain skip condition",
+    "Monthly: more than two bleeding products/materials",
+    "Monthly: 'no product' selected with another option",
+    "Unmatched symmetric body-map response codes",
+    "Unmatched detailed body-map response codes",
+    "Inferred completed cycle length is zero or negative",
+    "Inferred completed cycle shorter than configured onset interval",
+    "Completed inferred cycles above review threshold (not excluded)",
+    "Daily record assigned to more than one inferred cycle"
+  ),
+  Issues = c(
+    sum(duplicated(daily_data[c("participant_id", "report_date")])),
+    sum(daily_data$report_date < daily_data$programme_start_date, na.rm = TRUE),
+    sum(
+      daily_data$menstrual_bleeding_yesterday == 0 &
+        (!is.na(daily_data$bleeding_amount_yesterday) |
+         !is.na(daily_data$bleeding_amount_expected_yesterday)),
+      na.rm = TRUE
+    ),
+    sum(
+      daily_data$menstrual_pain_yesterday == 0 &
+        (!is.na(daily_data$pain_amount_yesterday) |
+         !is.na(daily_data$pain_duration_yesterday) |
+         (!is.na(daily_data[[location_field]]) & str_trim(daily_data[[location_field]]) != "")),
+      na.rm = TRUE
+    ),
+    sum(duplicated(monthly_data[c("participant_id", "reference_month")])),
+    sum(
+      monthly_data$menstrual_bleeding_last_month == 0 &
+        (!is.na(monthly_data$clots_last_month) |
+         (!is.na(monthly_data$bleeding_product_material) & monthly_data$bleeding_product_material != "") |
+         !is.na(monthly_data$bleeding_days_change)), na.rm = TRUE
+    ),
+    sum(monthly_data$clots_last_month != 1 &
+          (!is.na(monthly_data$clot_number_change) | !is.na(monthly_data$clot_size_change)),
+        na.rm = TRUE),
+    sum(monthly_data$menstrual_pain_last_month == 0 &
+          (!is.na(monthly_data$pain_severity_change) | !is.na(monthly_data$pain_days_change) |
+           !is.na(monthly_data$pain_location_change)), na.rm = TRUE),
+    sum(str_count(coalesce(monthly_data$bleeding_product_material, ""), "\\S+") > 2),
+    sum(str_detect(coalesce(monthly_data$bleeding_product_material, ""), "(^| )10( |$)") &
+          str_count(coalesce(monthly_data$bleeding_product_material, ""), "\\S+") > 1),
+    length(bodymap$unknown),
+    length(detailed_bodymap$unknown),
+    sum(completed_cycles$cycle_length <= 0, na.rm = TRUE),
+    sum(completed_cycles$cycle_length < minimum_cycle_gap_days, na.rm = TRUE),
+    sum(completed_cycles$cycle_length > long_cycle_review_days, na.rm = TRUE),
+    sum(duplicated(cycle_daily[c("participant_id", "report_date")]))
+  )
+)
+
+kable(data_quality, align = c("l", "r"))
+```
+
+## Analysis notes
+
+- Daily rows are repeated submissions. Daily symptom percentages use daily submissions as their denominator.
+- Both body maps use pain-positive daily submissions and all unique participants as the denominator. Each person contributes at most once per detailed or symmetric region across the observation period.
+- Programme cycles are numbered separately for each participant from the first qualifying CD1 after programme start. Completed cycle lengths remain in days and are not normalised to 28 days.
+- Cycle-specific prevalence counts each participant once per region and programme cycle. The timing heatmap counts each participant once per region, programme cycle, and cycle day; its cell denominator is participants with a report for that cycle and day.
+- Monthly rows are participant-months. Monthly conditional questions use only rows for which the XLSForm makes the question relevant.
+- Daily–monthly comparisons require a stable participant ID and a correctly aligned calendar month.
+- This is descriptive analysis. It does not test causal relationships or make clinical interpretations.
+- The dummy-data pain distribution is intentionally pelvic, abdominal, lumbosacral, breast, and head weighted for testing; it is illustrative and is not a clinical prevalence estimate.
+

@@ -1,0 +1,688 @@
+
+```{=html}
+<style>
+.bodymap-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: .8rem;
+  margin: 0 0 1rem;
+}
+
+.bodymap-stat {
+  padding: .85rem 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: .7rem;
+  background: var(--bs-tertiary-bg);
+}
+
+.bodymap-stat-label {
+  color: var(--bs-secondary-color);
+  font-size: .85rem;
+  margin-bottom: .15rem;
+}
+
+.bodymap-stat-value {
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.bodymap-frame {
+  position: relative;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.bodymap-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+}
+
+.bodymap-region {
+  transition: filter 120ms ease, stroke-width 120ms ease;
+}
+
+.bodymap-region:hover {
+  filter: brightness(.9) saturate(1.08);
+  stroke: #173f40 !important;
+  stroke-width: 1.5px !important;
+}
+
+.bodymap-region:focus {
+  outline: none;
+  filter: brightness(.9) saturate(1.08);
+  stroke: #173f40 !important;
+  stroke-width: 2px !important;
+}
+
+.bodymap-hover {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+}
+
+.bodymap-hover.is-visible {
+  display: block;
+  opacity: 1;
+}
+
+.bodymap-legend {
+  max-width: 560px;
+  margin: .8rem auto 1.5rem;
+}
+
+.bodymap-gradient {
+  height: .8rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f1f6f5, #b8ddda, #61b9b2, #167c77, #064743);
+}
+
+.bodymap-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--bs-secondary-color);
+  font-size: .82rem;
+  margin-top: .25rem;
+}
+
+.bodymap-note {
+  color: var(--bs-secondary-color);
+  text-align: center;
+  margin: .35rem 0 1rem;
+}
+
+.bodymap-warning {
+  border-left: 4px solid #c97a15;
+  background: var(--bs-warning-bg-subtle);
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+}
+
+.bodymap-table-scroll {
+  max-height: 24rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--bs-border-color);
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.bodymap-table-scroll table {
+  margin-bottom: 0;
+}
+
+.bodymap-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bs-body-bg);
+}
+</style>
+```
+
+```{r}
+#| label: setup
+
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+library(xml2)
+library(htmltools)
+library(scales)
+library(knitr)
+library(ggplot2)
+library(yaml)
+
+config_file <- "dashboard_config.yml"
+stopifnot(file.exists(config_file))
+config <- read_yaml(config_file)
+
+daily_data_file <- config$files$daily_data
+monthly_data_file <- config$files$monthly_data
+svg_file <- config$files$bodymap_svg
+enrolment_data_file <- config$files$enrolment
+
+participant_id_source_field <- config$fields$participant_id
+programme_start_source_field <- config$fields$programme_start_date
+report_date_source_field <- config$fields$report_date
+reference_month_source_field <- config$fields$reference_month
+location_source_field <- config$fields$pain_locations
+location_field <- "pain_locations_yesterday"
+
+map_title <- config$bodymap$symmetric_title
+detailed_map_title <- config$bodymap$detailed_title
+top_n <- config$bodymap$top_regions_table
+top_timing_region_n <- config$bodymap$top_regions_timing
+
+spotting_starts_cycle <- config$cycle_inference$spotting_starts_cycle
+require_next_day_blood <- config$cycle_inference$require_next_day_blood
+minimum_cycle_gap_days <- config$cycle_inference$minimum_days_between_onsets
+long_cycle_review_days <- config$cycle_inference$long_cycle_review_days
+bleed_free_days_between_episodes <- config$cycle_inference$bleed_free_days_between_episodes
+stopifnot(bleed_free_days_between_episodes %in% c(1, 2))
+
+cycles_to_display <- config$display$programme_cycles
+cycle_days_to_display <- config$display$cycle_days
+cycle_day_tick_interval <- config$display$cycle_day_tick_interval
+programme_months_to_display <- config$display$programme_months
+
+bootstrap_replicates <- config$uncertainty$bootstrap_replicates
+confidence_level <- config$uncertainty$confidence_level
+uncertainty_seed <- config$uncertainty$random_seed
+programme_period_days <- config$study$programme_period_days
+site_labels <- unlist(config$labels$sites)
+set.seed(uncertainty_seed)
+```
+
+```{r}
+#| label: calculate-results
+
+stopifnot(file.exists(daily_data_file), file.exists(monthly_data_file), file.exists(svg_file))
+
+# Find genuine bilateral pairs in the SVG. A region is combined only when both
+# an exact _Left and _Right version exist; unmatched names remain separate.
+svg_id_scan <- read_xml(svg_file) |>
+  xml_find_all("//*[@id]") |>
+  xml_attr("id")
+
+left_bases <- svg_id_scan[str_detect(svg_id_scan, "_Left$")] |>
+  str_remove("_Left$")
+right_bases <- svg_id_scan[str_detect(svg_id_scan, "_Right$")] |>
+  str_remove("_Right$")
+paired_bases <- intersect(left_bases, right_bases)
+
+combine_sides <- function(region) {
+  base <- str_remove(region, "_(?:Left|Right)$")
+  if_else(region != base & base %in% paired_bases, base, region)
+}
+
+# Hands and feet ignore both side and body surface. Arms retain their
+# upper/mid/fore subdivision, and legs retain their upper/lower subdivision,
+# while also ignoring side and dorsal/ventral surface.
+combine_regions <- function(region) {
+  side_combined <- combine_sides(region)
+
+  case_when(
+    str_detect(region, "^(?:Dorsal_Foot_Ankle|Ventral_Foot)_(?:Left|Right)$") ~ "Foot",
+    str_detect(region, "^(?:Dorsal|Ventral)_Hand_(?:Left|Right)$") ~ "Hand",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Fore_(?:Left|Right)$") ~ "Arm_Fore",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Mid_(?:Left|Right)$") ~ "Arm_Mid",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Upper_(?:Left|Right)$") ~ "Arm_Upper",
+    str_detect(region, "^(?:Dorsal|Ventral)_Leg_Lower_(?:Left|Right)$") ~ "Leg_Lower",
+    str_detect(region, "^(?:Dorsal|Ventral)_Leg_Upper_(?:Left|Right)$") ~ "Leg_Upper",
+    TRUE ~ side_combined
+  )
+}
+
+drawable_id_scan <- read_xml(svg_file) |>
+  xml_find_all(
+    "//*[@id and (self::*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'] or ./*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'])]"
+  ) |>
+  xml_attr("id") |>
+  unique()
+
+all_detailed_regions <- drawable_id_scan
+all_symmetric_regions <- unique(combine_regions(drawable_id_scan))
+
+daily_data <- read_csv(daily_data_file, show_col_types = FALSE) |>
+  rename(
+    participant_id = all_of(participant_id_source_field),
+    programme_start_date = all_of(programme_start_source_field),
+    report_date = all_of(report_date_source_field),
+    pain_locations_yesterday = all_of(location_source_field)
+  ) |>
+  mutate(
+    report_date = as.Date(report_date),
+    programme_start_date = as.Date(programme_start_date),
+    days_since_contraceptive_start = as.integer(report_date - programme_start_date)
+  )
+monthly_data <- read_csv(monthly_data_file, show_col_types = FALSE) |>
+  rename(
+    participant_id = all_of(participant_id_source_field),
+    programme_start_date = all_of(programme_start_source_field),
+    reference_month = all_of(reference_month_source_field)
+  ) |>
+  mutate(programme_start_date = as.Date(programme_start_date))
+
+site_lookup <- read_csv(enrolment_data_file, show_col_types = FALSE) |>
+  transmute(
+    participant_id = uniqueid,
+    organization,
+    site = factor(unname(site_labels[organization]), levels = unname(site_labels))
+  )
+
+daily_data <- daily_data |>
+  left_join(site_lookup, by = "participant_id")
+monthly_data <- monthly_data |>
+  left_join(site_lookup, by = "participant_id")
+
+required_daily_fields <- c(
+  "participant_id",
+  "programme_start_date",
+  "report_date",
+  "menstrual_bleeding_yesterday",
+  "bleeding_expected_yesterday",
+  "bleeding_amount_yesterday",
+  "bleeding_amount_expected_yesterday",
+  "menstrual_pain_yesterday",
+  "pain_expected_yesterday",
+  "pain_amount_yesterday",
+  "pain_amount_expected_yesterday",
+  "pain_duration_yesterday",
+  location_field
+)
+
+required_monthly_fields <- c(
+  "participant_id", "programme_start_date", "reference_month", "menstrual_bleeding_last_month",
+  "menstrual_pain_last_month", "clots_last_month",
+  "bleeding_product_material", "bleeding_days_change", "bleeding_spacing_change",
+  "bleeding_amount_change", "bleeding_start_predictability",
+  "bleeding_stop_predictability", "bleeding_color_change", "bleeding_smell_change",
+  "clot_number_change", "clot_size_change", "pain_severity_change",
+  "pain_days_change", "pain_location_change",
+  "bleeding_management_impact", "pain_management_impact",
+  "bleeding_daily_activities_impact", "pain_daily_activities_impact"
+)
+
+missing_daily <- setdiff(required_daily_fields, names(daily_data))
+missing_monthly <- setdiff(required_monthly_fields, names(monthly_data))
+if (length(missing_daily) + length(missing_monthly) > 0) {
+  stop("Missing fields. Daily: ", paste(missing_daily, collapse = ", "),
+       "; monthly: ", paste(missing_monthly, collapse = ", "))
+}
+
+n_participants <- n_distinct(c(daily_data$participant_id, monthly_data$participant_id))
+if (n_participants == 0 || nrow(daily_data) == 0 || nrow(monthly_data) == 0) {
+  stop("Both datasets must contain records.")
+}
+
+n_daily_submissions <- nrow(daily_data)
+n_monthly_submissions <- nrow(monthly_data)
+n_study_days <- n_distinct(daily_data$report_date)
+median_daily_completion <- daily_data |>
+  group_by(participant_id) |>
+  summarise(
+    submissions = n(),
+    expected_days = as.integer(max(daily_data$report_date) - first(programme_start_date)) + 1,
+    .groups = "drop"
+  ) |>
+  summarise(value = median(submissions / expected_days)) |>
+  pull(value)
+
+report_data <- daily_data |>
+  mutate(
+    bleeding = factor(
+      menstrual_bleeding_yesterday,
+      levels = c(0, 1),
+      labels = c("No bleeding", "Bleeding")
+    ),
+    bleeding_expected = factor(
+      bleeding_expected_yesterday,
+      levels = 1:3,
+      labels = c(
+        "Did not expect bleeding",
+        "Expected bleeding",
+        "Unsure whether to expect bleeding"
+      )
+    ),
+    bleeding_amount = factor(
+      bleeding_amount_yesterday,
+      levels = 1:4,
+      labels = c("Spotting", "Light", "Moderate", "Heavy"),
+      ordered = TRUE
+    ),
+    bleeding_amount_expected = factor(
+      bleeding_amount_expected_yesterday,
+      levels = 1:4,
+      labels = c(
+        "Amount expected",
+        "Lighter than expected",
+        "Heavier than expected",
+        "Unsure what amount to expect"
+      )
+    ),
+    pain = factor(
+      menstrual_pain_yesterday,
+      levels = c(0, 1),
+      labels = c("No pain", "Pain")
+    ),
+    pain_expected = factor(
+      pain_expected_yesterday,
+      levels = 1:3,
+      labels = c(
+        "Did not expect pain",
+        "Expected pain",
+        "Unsure whether to expect pain"
+      )
+    ),
+    pain_amount = factor(
+      pain_amount_yesterday,
+      levels = 1:4,
+      labels = c("Mild", "Moderate", "Severe", "Very severe"),
+      ordered = TRUE
+    ),
+    pain_amount_expected = factor(
+      pain_amount_expected_yesterday,
+      levels = 1:4,
+      labels = c(
+        "Severity expected",
+        "Less severe than expected",
+        "More severe than expected",
+        "Unsure what severity to expect"
+      )
+    ),
+    pain_duration = factor(
+      pain_duration_yesterday,
+      levels = 1:4,
+      labels = c(
+        "Briefly or for a short time",
+        "For part of the day",
+        "All day, on and off",
+        "All day, constantly"
+      ),
+      ordered = TRUE
+    )
+  )
+
+n_bleeding <- sum(daily_data$menstrual_bleeding_yesterday == 1, na.rm = TRUE)
+n_pain <- sum(daily_data$menstrual_pain_yesterday == 1, na.rm = TRUE)
+n_severe_pain <- sum(daily_data$pain_amount_yesterday %in% c(3, 4), na.rm = TRUE)
+clustered_factor_summary <- function(
+  data,
+  response_factor,
+  question,
+  count_name = "participants"
+) {
+  stopifnot(length(response_factor) == nrow(data), "participant_id" %in% names(data))
+  response_levels <- levels(response_factor)
+  if (is.null(response_levels)) {
+    response_levels <- sort(unique(na.omit(as.character(response_factor))))
+  }
+
+  cluster_ids <- sort(unique(data$participant_id))
+  cluster_index <- match(data$participant_id, cluster_ids)
+  denominator_by_cluster <- tabulate(cluster_index, nbins = length(cluster_ids))
+  response_matrix <- table(
+    factor(data$participant_id, levels = cluster_ids),
+    factor(as.character(response_factor), levels = response_levels)
+  )
+
+  bootstrap_percent <- replicate(bootstrap_replicates, {
+    cluster_weights <- tabulate(
+      sample.int(length(cluster_ids), length(cluster_ids), replace = TRUE),
+      nbins = length(cluster_ids)
+    )
+    as.numeric(crossprod(cluster_weights, response_matrix)) /
+      sum(cluster_weights * denominator_by_cluster)
+  })
+
+  alpha <- (1 - confidence_level) / 2
+  output <- tibble(
+    response_order = seq_along(response_levels),
+    response = response_levels,
+    count = as.integer(colSums(response_matrix)),
+    denominator = nrow(data),
+    percent = count / denominator,
+    ci_low = apply(bootstrap_percent, 1, quantile, probs = alpha, type = 6),
+    ci_high = apply(bootstrap_percent, 1, quantile, probs = 1 - alpha, type = 6),
+    question = question
+  )
+  names(output)[names(output) == "count"] <- count_name
+  output
+}
+
+summarise_response <- function(data, variable, question) {
+  clustered_factor_summary(
+    data,
+    response_factor = data[[variable]],
+    question = question,
+    count_name = "participants"
+  )
+}
+
+summarise_response_by_site <- function(data, variable, question) {
+  site_names <- unique(na.omit(as.character(data$site)))
+  bind_rows(lapply(site_names, function(site_name) {
+    summarise_response(
+      filter(data, as.character(site) == site_name),
+      variable,
+      question
+    ) |>
+      mutate(site = site_name)
+  }))
+}
+
+plot_daily_compositions <- function(data, question_levels, caption) {
+  plot_data <- data |>
+    mutate(
+      question = factor(question, levels = rev(question_levels)),
+      response_role = factor(response_order, levels = 1:4),
+      short_response = recode(
+        as.character(response),
+        "Did not expect bleeding" = "Not expected",
+        "Expected bleeding" = "Expected",
+        "Unsure whether to expect bleeding" = "Unsure",
+        "Amount expected" = "As expected",
+        "Lighter than expected" = "Lighter",
+        "Heavier than expected" = "Heavier",
+        "Unsure what amount to expect" = "Unsure",
+        "Did not expect pain" = "Not expected",
+        "Expected pain" = "Expected",
+        "Unsure whether to expect pain" = "Unsure",
+        "Severity expected" = "As expected",
+        "Less severe than expected" = "Less severe",
+        "More severe than expected" = "More severe",
+        "Unsure what severity to expect" = "Unsure",
+        "Briefly or for a short time" = "Brief",
+        "For part of the day" = "Part-day",
+        "All day, on and off" = "On/off all day",
+        "All day, constantly" = "Constant",
+        .default = as.character(response)
+      )
+    )
+
+  ggplot(plot_data, aes(percent, question, fill = response_role)) +
+    geom_col(width = .62, position = position_stack(reverse = TRUE)) +
+    geom_text(
+      aes(
+        colour = response_role,
+        label = sprintf(
+          "%s\n%s",
+          short_response,
+          scales::percent(percent, accuracy = .1)
+        )
+      ),
+      position = position_stack(vjust = .5, reverse = TRUE),
+      size = 2.65,
+      lineheight = .9
+    ) +
+    scale_fill_manual(
+      values = c(`1` = "#dce5e3", `2` = "#8fc5c1", `3` = "#167c77", `4` = "#d8c8a5"),
+      guide = "none",
+      na.value = "#d8c8a5"
+    ) +
+    scale_colour_manual(
+      values = c(`1` = "#1f2524", `2` = "#1f2524", `3` = "#ffffff", `4` = "#1f2524"),
+      guide = "none",
+      na.value = "#1f2524"
+    ) +
+    scale_x_continuous(
+      limits = c(0, 1),
+      breaks = seq(0, 1, by = .25),
+      labels = percent_format(accuracy = 1),
+      expand = expansion(mult = 0)
+    ) +
+    labs(
+      x = "Percent within the relevant daily submissions",
+      y = NULL,
+      caption = caption
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.caption = element_text(hjust = 0),
+      plot.margin = margin(8, 14, 8, 8)
+    )
+}
+
+# A participant is counted at most once per combined body region across all
+# daily submissions.
+region_results <- daily_data |>
+  filter(menstrual_pain_yesterday == 1) |>
+  transmute(
+    participant_id,
+    region = str_split(coalesce(.data[[location_field]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  mutate(region = combine_regions(region)) |>
+  distinct(participant_id, region) |>
+  count(region, name = "participants") |>
+  right_join(tibble(region = all_symmetric_regions), by = "region") |>
+  mutate(participants = replace_na(participants, 0L)) |>
+  mutate(percent = participants / n_participants * 100) |>
+  arrange(desc(percent), region)
+
+region_results_detailed <- daily_data |>
+  filter(menstrual_pain_yesterday == 1) |>
+  transmute(
+    participant_id,
+    region = str_split(coalesce(.data[[location_field]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  distinct(participant_id, region) |>
+  count(region, name = "participants") |>
+  right_join(tibble(region = all_detailed_regions), by = "region") |>
+  mutate(participants = replace_na(participants, 0L)) |>
+  mutate(percent = participants / n_participants * 100) |>
+  arrange(desc(percent), region)
+
+total_selections <- sum(region_results$participants)
+
+monthly_report <- monthly_data |>
+  mutate(
+    bleeding = factor(menstrual_bleeding_last_month, c(0, 1), c("No", "Yes")),
+    pain = factor(menstrual_pain_last_month, c(0, 1), c("No", "Yes")),
+    clots = factor(clots_last_month, c(0, 1), c("No", "Yes"))
+  )
+```
+
+```{r}
+#| label: svg-functions
+
+set_svg_fill <- function(node, colour) {
+  style <- xml_attr(node, "style")
+  style[is.na(style)] <- ""
+
+  if (str_detect(style, "(^|;)\\s*fill\\s*:")) {
+    style <- str_replace(
+      style,
+      "((^|;)\\s*fill\\s*:)\\s*[^;]+",
+      paste0("\\1", colour)
+    )
+  } else {
+    separator <- if_else(style == "", "", ";")
+    style <- paste0(style, separator, "fill:", colour)
+  }
+
+  xml_set_attr(node, "style", style)
+  existing_class <- xml_attr(node, "class")
+  existing_class[is.na(existing_class)] <- ""
+  xml_set_attr(node, "class", str_squish(paste(existing_class, "bodymap-region")))
+}
+
+build_bodymap <- function(svg_file, results, title, region_transform = combine_regions) {
+  svg <- read_xml(svg_file)
+  root <- xml_root(svg)
+
+  if (is.na(xml_attr(root, "viewBox"))) {
+    width <- parse_number(xml_attr(root, "width"))
+    height <- parse_number(xml_attr(root, "height"))
+    xml_set_attr(root, "viewBox", paste(0, 0, width, height))
+  }
+
+  xml_set_attr(root, "width", "100%")
+  xml_set_attr(root, "height", "auto")
+  xml_set_attr(root, "role", "img")
+  xml_set_attr(root, "aria-label", title)
+
+  # Select only drawable body-region objects. This excludes Affinity's embedded
+  # background image and definition IDs while retaining grouped regions.
+  id_nodes <- xml_find_all(
+    svg,
+    "//*[@id and (self::*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'] or ./*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'])]"
+  )
+  svg_ids <- xml_attr(id_nodes, "id")
+
+  mapped <- tibble(
+    svg_region = svg_ids,
+    region = region_transform(svg_ids)
+  ) |>
+    left_join(results, by = "region") |>
+    mutate(
+      participants = replace_na(participants, 0L),
+      percent = replace_na(percent, 0)
+    )
+
+  scale_max <- max(mapped$percent, 1)
+  fill_scale <- col_numeric(
+    palette = c("#f1f6f5", "#b8ddda", "#61b9b2", "#167c77", "#064743"),
+    domain = c(0, scale_max),
+    na.color = "#f1f6f5"
+  )
+
+  for (index in seq_len(nrow(mapped))) {
+    svg_region <- mapped$svg_region[[index]]
+    region <- mapped$region[[index]]
+    node <- xml_find_first(svg, sprintf("//*[@id='%s']", svg_region))
+
+    shape_nodes <- if (xml_name(node) %in% c("path", "polygon", "rect", "circle", "ellipse")) {
+      xml_find_all(node, "self::*")
+    } else {
+      xml_find_all(
+        node,
+        ".//*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse']"
+      )
+    }
+
+    colour <- fill_scale(mapped$percent[[index]])
+    for (node_index in seq_along(shape_nodes)) {
+      set_svg_fill(shape_nodes[[node_index]], colour)
+    }
+
+    old_titles <- xml_find_all(node, "./*[local-name()='title']")
+    xml_remove(old_titles)
+    tooltip <- sprintf(
+      "%s: %d participant%s (%.1f%%)",
+      str_replace_all(region, "_", " "),
+      mapped$participants[[index]],
+      if_else(mapped$participants[[index]] == 1, "", "s"),
+      mapped$percent[[index]]
+    )
+    xml_set_attr(node, "data-bodymap-tooltip", tooltip)
+    xml_set_attr(node, "aria-label", tooltip)
+    xml_set_attr(node, "tabindex", "0")
+    xml_add_child(node, "title", tooltip, .where = 1)
+  }
+
+  list(
+    markup = as.character(root),
+    mapped = mapped,
+    unknown = setdiff(results$region, unique(region_transform(svg_ids))),
+    maximum = scale_max
+  )
+}
+
+bodymap <- build_bodymap(svg_file, region_results, map_title)
+detailed_bodymap <- build_bodymap(
+  svg_file,
+  region_results_detailed,
+  detailed_map_title,
+  region_transform = identity
+)
+```

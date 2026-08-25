@@ -1,0 +1,485 @@
+---
+title: "Body-map symptom results — symmetric limb regions"
+format:
+  html:
+    theme: default
+    page-layout: full
+    toc: false
+    code-fold: true
+    code-summary: "Show R code"
+    embed-resources: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{=html}
+<style>
+.bodymap-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: .8rem;
+  margin: 0 0 1rem;
+}
+
+.bodymap-stat {
+  padding: .85rem 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: .7rem;
+  background: var(--bs-tertiary-bg);
+}
+
+.bodymap-stat-label {
+  color: var(--bs-secondary-color);
+  font-size: .85rem;
+  margin-bottom: .15rem;
+}
+
+.bodymap-stat-value {
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.bodymap-frame {
+  position: relative;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.bodymap-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 78vh;
+}
+
+.bodymap-region {
+  transition: filter 120ms ease, stroke-width 120ms ease;
+}
+
+.bodymap-region:hover {
+  filter: brightness(.9) saturate(1.08);
+  stroke: #173f40 !important;
+  stroke-width: 1.5px !important;
+}
+
+.bodymap-region:focus {
+  outline: none;
+  filter: brightness(.9) saturate(1.08);
+  stroke: #173f40 !important;
+  stroke-width: 2px !important;
+}
+
+.bodymap-hover {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+}
+
+.bodymap-hover.is-visible {
+  display: block;
+  opacity: 1;
+}
+
+.bodymap-legend {
+  max-width: 560px;
+  margin: .8rem auto 1.5rem;
+}
+
+.bodymap-gradient {
+  height: .8rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f1f6f5, #b8ddda, #61b9b2, #167c77, #064743);
+}
+
+.bodymap-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--bs-secondary-color);
+  font-size: .82rem;
+  margin-top: .25rem;
+}
+
+.bodymap-note {
+  color: var(--bs-secondary-color);
+  text-align: center;
+  margin: .35rem 0 1rem;
+}
+
+.bodymap-warning {
+  border-left: 4px solid #c97a15;
+  background: var(--bs-warning-bg-subtle);
+  padding: .75rem 1rem;
+  margin: 1rem 0;
+}
+</style>
+```
+
+```{r}
+#| label: setup
+
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+library(xml2)
+library(htmltools)
+library(scales)
+library(knitr)
+
+# Keep these files beside this QMD, or replace them with full paths.
+data_file <- "dummy_bodymap_data.csv"
+svg_file <- "bodymap_prototype.svg"
+field_name <- "bodymap_symptoms_multiselect"
+
+map_title <- "Reported symptom locations — symmetric limb regions"
+top_n <- 15
+```
+
+```{r}
+#| label: calculate-results
+
+stopifnot(file.exists(data_file), file.exists(svg_file))
+
+# Find genuine bilateral pairs in the SVG. A region is combined only when both
+# an exact _Left and _Right version exist; unmatched names remain separate.
+svg_id_scan <- read_xml(svg_file) |>
+  xml_find_all("//*[@id]") |>
+  xml_attr("id")
+
+left_bases <- svg_id_scan[str_detect(svg_id_scan, "_Left$")] |>
+  str_remove("_Left$")
+right_bases <- svg_id_scan[str_detect(svg_id_scan, "_Right$")] |>
+  str_remove("_Right$")
+paired_bases <- intersect(left_bases, right_bases)
+
+combine_sides <- function(region) {
+  base <- str_remove(region, "_(?:Left|Right)$")
+  if_else(region != base & base %in% paired_bases, base, region)
+}
+
+# Hands and feet ignore both side and body surface. Arms retain their
+# upper/mid/fore subdivision, and legs retain their upper/lower subdivision,
+# while also ignoring side and dorsal/ventral surface.
+combine_regions <- function(region) {
+  side_combined <- combine_sides(region)
+
+  case_when(
+    str_detect(region, "^(?:Dorsal_Foot_Ankle|Ventral_Foot)_(?:Left|Right)$") ~ "Foot",
+    str_detect(region, "^(?:Dorsal|Ventral)_Hand_(?:Left|Right)$") ~ "Hand",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Fore_(?:Left|Right)$") ~ "Arm_Fore",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Mid_(?:Left|Right)$") ~ "Arm_Mid",
+    str_detect(region, "^(?:Dorsal|Ventral)_Arm_Upper_(?:Left|Right)$") ~ "Arm_Upper",
+    str_detect(region, "^(?:Dorsal|Ventral)_Leg_Lower_(?:Left|Right)$") ~ "Leg_Lower",
+    str_detect(region, "^(?:Dorsal|Ventral)_Leg_Upper_(?:Left|Right)$") ~ "Leg_Upper",
+    TRUE ~ side_combined
+  )
+}
+
+participant_data <- read_csv(data_file, show_col_types = FALSE)
+
+if (!field_name %in% names(participant_data)) {
+  stop(sprintf("Column '%s' was not found in %s.", field_name, data_file))
+}
+
+n_participants <- nrow(participant_data)
+
+if (n_participants == 0) {
+  stop("The dataset contains no participant records.")
+}
+
+# Each row is one participant. Splitting then using distinct() ensures that a
+# body region is counted no more than once for the same participant.
+region_results <- participant_data |>
+  transmute(
+    participant_row = row_number(),
+    region = str_split(coalesce(.data[[field_name]], ""), "\\s+")
+  ) |>
+  unnest_longer(region) |>
+  filter(!is.na(region), region != "") |>
+  mutate(region = combine_regions(region)) |>
+  distinct(participant_row, region) |>
+  count(region, name = "participants") |>
+  mutate(percent = participants / n_participants * 100) |>
+  arrange(desc(percent), region)
+
+n_reporting <- participant_data |>
+  summarise(n = sum(!is.na(.data[[field_name]]) & str_trim(.data[[field_name]]) != "")) |>
+  pull(n)
+
+total_selections <- sum(region_results$participants)
+```
+
+```{r}
+#| label: svg-functions
+
+set_svg_fill <- function(node, colour) {
+  style <- xml_attr(node, "style")
+  style[is.na(style)] <- ""
+
+  if (str_detect(style, "(^|;)\\s*fill\\s*:")) {
+    style <- str_replace(
+      style,
+      "((^|;)\\s*fill\\s*:)\\s*[^;]+",
+      paste0("\\1", colour)
+    )
+  } else {
+    separator <- if_else(style == "", "", ";")
+    style <- paste0(style, separator, "fill:", colour)
+  }
+
+  xml_set_attr(node, "style", style)
+  existing_class <- xml_attr(node, "class")
+  existing_class[is.na(existing_class)] <- ""
+  xml_set_attr(node, "class", str_squish(paste(existing_class, "bodymap-region")))
+}
+
+build_bodymap <- function(svg_file, results, title) {
+  svg <- read_xml(svg_file)
+  root <- xml_root(svg)
+
+  if (is.na(xml_attr(root, "viewBox"))) {
+    width <- parse_number(xml_attr(root, "width"))
+    height <- parse_number(xml_attr(root, "height"))
+    xml_set_attr(root, "viewBox", paste(0, 0, width, height))
+  }
+
+  xml_set_attr(root, "width", "100%")
+  xml_set_attr(root, "height", "auto")
+  xml_set_attr(root, "role", "img")
+  xml_set_attr(root, "aria-label", title)
+
+  # Select only drawable body-region objects. This excludes Affinity's embedded
+  # background image and definition IDs while retaining grouped regions.
+  id_nodes <- xml_find_all(
+    svg,
+    "//*[@id and (self::*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'] or ./*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse'])]"
+  )
+  svg_ids <- xml_attr(id_nodes, "id")
+
+  mapped <- tibble(
+    svg_region = svg_ids,
+    region = combine_regions(svg_ids)
+  ) |>
+    left_join(results, by = "region") |>
+    mutate(
+      participants = replace_na(participants, 0L),
+      percent = replace_na(percent, 0)
+    )
+
+  scale_max <- max(mapped$percent, 1)
+  fill_scale <- col_numeric(
+    palette = c("#f1f6f5", "#b8ddda", "#61b9b2", "#167c77", "#064743"),
+    domain = c(0, scale_max),
+    na.color = "#f1f6f5"
+  )
+
+  for (index in seq_len(nrow(mapped))) {
+    svg_region <- mapped$svg_region[[index]]
+    region <- mapped$region[[index]]
+    node <- xml_find_first(svg, sprintf("//*[@id='%s']", svg_region))
+
+    shape_nodes <- if (xml_name(node) %in% c("path", "polygon", "rect", "circle", "ellipse")) {
+      xml_find_all(node, "self::*")
+    } else {
+      xml_find_all(
+        node,
+        ".//*[local-name()='path' or local-name()='polygon' or local-name()='rect' or local-name()='circle' or local-name()='ellipse']"
+      )
+    }
+
+    colour <- fill_scale(mapped$percent[[index]])
+    for (node_index in seq_along(shape_nodes)) {
+      set_svg_fill(shape_nodes[[node_index]], colour)
+    }
+
+    old_titles <- xml_find_all(node, "./*[local-name()='title']")
+    xml_remove(old_titles)
+    tooltip <- sprintf(
+      "%s: %d participant%s (%.1f%%)",
+      str_replace_all(region, "_", " "),
+      mapped$participants[[index]],
+      if_else(mapped$participants[[index]] == 1, "", "s"),
+      mapped$percent[[index]]
+    )
+    xml_set_attr(node, "data-bodymap-tooltip", tooltip)
+    xml_set_attr(node, "aria-label", tooltip)
+    xml_set_attr(node, "tabindex", "0")
+    xml_add_child(node, "title", tooltip, .where = 1)
+  }
+
+  list(
+    markup = as.character(root),
+    mapped = mapped,
+    unknown = setdiff(results$region, unique(combine_regions(svg_ids))),
+    maximum = scale_max
+  )
+}
+
+bodymap <- build_bodymap(svg_file, region_results, map_title)
+```
+
+## Results
+
+Left and right members of an otherwise identical region pair are combined.
+Hands and feet also ignore dorsal/ventral surface. Arms are grouped as fore,
+mid, or upper; legs are grouped as lower or upper. A participant selecting more
+than one component of a combined region contributes once to that region.
+
+```{r}
+#| label: summary
+#| results: asis
+
+top_region <- if (nrow(region_results) > 0) region_results[1, ] else NULL
+top_label <- if (is.null(top_region)) "None" else str_replace_all(top_region$region, "_", " ")
+top_value <- if (is.null(top_region)) 0 else top_region$participants
+
+summary_html <- tags$div(
+  class = "bodymap-summary",
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Participants analysed"),
+    tags$div(class = "bodymap-stat-value", comma(n_participants))
+  ),
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Participants reporting an area"),
+    tags$div(class = "bodymap-stat-value", comma(n_reporting))
+  ),
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Combined-region selections"),
+    tags$div(class = "bodymap-stat-value", comma(total_selections))
+  ),
+  tags$div(
+    class = "bodymap-stat",
+    tags$div(class = "bodymap-stat-label", "Most selected region"),
+    tags$div(class = "bodymap-stat-value", top_label),
+    tags$div(sprintf("%s participant(s)", comma(top_value)))
+  )
+)
+
+cat("```{=html}\n", as.character(summary_html), "\n```\n", sep = "")
+```
+
+```{r}
+#| label: body-map
+#| results: asis
+
+map_html <- tags$div(
+  id = "bodymap-report",
+  tags$div(
+    class = "bodymap-frame",
+    HTML(bodymap$markup),
+    tags$div(
+      class = "tooltip bodymap-hover",
+      role = "status",
+      `aria-live` = "polite",
+      tags$div(class = "tooltip-inner")
+    )
+  ),
+  tags$div(
+    class = "bodymap-legend",
+    `aria-label` = "Colour scale: percent of participants",
+    tags$div(class = "bodymap-gradient"),
+    tags$div(
+      class = "bodymap-legend-labels",
+      tags$span("0%"),
+      tags$span("Percent of participants"),
+      tags$span(sprintf("%.1f%%", bodymap$maximum))
+    )
+  ),
+  tags$div(
+    class = "bodymap-note",
+    "Hover over or focus any combined limb component to see its participant count and percentage."
+  ),
+  tags$script(HTML("(function () {
+    const root = document.getElementById('bodymap-report');
+    if (!root) return;
+
+    const frame = root.querySelector('.bodymap-frame');
+    const tooltip = root.querySelector('.bodymap-hover');
+    const tooltipInner = tooltip.querySelector('.tooltip-inner');
+
+    function regionFrom(target) {
+      return target && target.closest
+        ? target.closest('[data-bodymap-tooltip]')
+        : null;
+    }
+
+    function showTooltip(region) {
+      if (!region || !frame.contains(region)) return;
+      tooltipInner.textContent = region.getAttribute('data-bodymap-tooltip');
+      tooltip.classList.add('is-visible');
+
+      const regionBox = region.getBoundingClientRect();
+      const frameBox = frame.getBoundingClientRect();
+      const tooltipBox = tooltip.getBoundingClientRect();
+      const inset = 8;
+
+      let left = regionBox.left - frameBox.left + regionBox.width / 2 - tooltipBox.width / 2;
+      left = Math.max(inset, Math.min(left, frameBox.width - tooltipBox.width - inset));
+
+      let top = regionBox.top - frameBox.top - tooltipBox.height - inset;
+      if (top < inset) top = regionBox.bottom - frameBox.top + inset;
+
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    }
+
+    function hideTooltip() {
+      tooltip.classList.remove('is-visible');
+    }
+
+    root.addEventListener('pointerover', function (event) {
+      const region = regionFrom(event.target);
+      if (region) showTooltip(region);
+    });
+
+    root.addEventListener('pointerout', function (event) {
+      const region = regionFrom(event.target);
+      const nextRegion = regionFrom(event.relatedTarget);
+      if (region && nextRegion !== region) hideTooltip();
+    });
+
+    root.addEventListener('focusin', function (event) {
+      const region = regionFrom(event.target);
+      if (region) showTooltip(region);
+    });
+
+    root.addEventListener('focusout', hideTooltip);
+  })();"))
+)
+
+cat("```{=html}\n", as.character(map_html), "\n```\n", sep = "")
+
+if (length(bodymap$unknown) > 0) {
+  warning_html <- tags$div(
+    class = "bodymap-warning",
+    tags$strong("Unmatched response codes: "),
+    paste(bodymap$unknown, collapse = ", ")
+  )
+  cat("```{=html}\n", as.character(warning_html), "\n```\n", sep = "")
+}
+```
+
+## Most frequently selected regions (symmetric limb groupings)
+
+```{r}
+#| label: results-table
+
+region_results |>
+  slice_head(n = top_n) |>
+  transmute(
+    Region = str_replace_all(region, "_", " "),
+    Participants = participants,
+    `Percent of participants` = percent(percent / 100, accuracy = 0.1)
+  ) |>
+  kable(align = c("l", "r", "r"))
+```
+
+Each row is treated as one participant. Blank responses remain in the denominator as participants reporting no body area. Since participants can select multiple regions, the percentages are not expected to sum to 100%.

@@ -1,1 +1,597 @@
-Landing page
+---
+title: "Recruitment and participant progress"
+subtitle: "Operational monitoring dashboard"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: monitoring-setup
+
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(knitr)
+library(yaml)
+library(htmltools)
+library(patchwork)
+
+config <- read_yaml("dashboard_config.yml")
+recruitment <- read_csv(config$files$recruitment, show_col_types = FALSE)
+enrolment <- read_csv(config$files$enrolment, show_col_types = FALSE)
+cimc <- read_csv(config$files$cimc, show_col_types = FALSE)
+refresh_metadata <- read_csv(config$files$refresh_metadata, show_col_types = FALSE)
+
+data_mode <- tolower(config$data_source$mode)
+mode_settings <- config$data_source[[data_mode]]
+publish_action_lists <- isTRUE(mode_settings$publish_action_lists_in_rendered_site)
+data_source_label <- if (data_mode == "production") "Kobo API production data" else "Linked dummy development data"
+data_prepared_at <- first(refresh_metadata$prepared_at_utc)
+
+site_labels <- unlist(config$labels$sites)
+site_targets <- unlist(config$study$site_targets)
+data_cutoff <- as.Date(first(refresh_metadata$effective_data_cutoff))
+expected_study_days <- config$study$expected_daily_reports
+missed_days_threshold <- config$monitoring$consecutive_missed_days
+monthly_due_day <- config$study$monthly_due_day
+followup_complete_label <- paste0("Reached day ", expected_study_days)
+
+recruitment <- recruitment |>
+  mutate(
+    recruitment_date = as.Date(recruitment_date),
+    planned_enrollment_date = as.Date(enrollment_date),
+    phone = as.character(phone),
+    email = as.character(email),
+    site = factor(unname(site_labels[organization]), levels = unname(site_labels))
+  )
+
+enrolment <- enrolment |>
+  mutate(
+    enrollment_date = as.Date(enrollment_date),
+    contraception_start_date = as.Date(contraception_start_date),
+    phone = as.character(phone),
+    email = as.character(email),
+    site = factor(unname(site_labels[organization]), levels = unname(site_labels))
+  )
+
+cimc <- cimc |>
+  mutate(date = as.Date(date), method_stop_date = as.Date(QB)) |>
+  left_join(
+    enrolment |> select(uniqueid, organization, site),
+    by = "uniqueid"
+  )
+
+method_stops <- cimc |>
+  filter(QA == 0, !is.na(method_stop_date)) |>
+  group_by(uniqueid) |>
+  summarise(method_stop_date = min(method_stop_date), .groups = "drop")
+
+daily_counts <- cimc |>
+  distinct(uniqueid, date) |>
+  group_by(uniqueid) |>
+  summarise(
+    daily_reports_received = n(),
+    first_report_date = min(date),
+    last_report_date = max(date),
+    .groups = "drop"
+  )
+
+monthly_counts <- cimc |>
+  filter(monthly_report_due == "yes") |>
+  distinct(uniqueid, date) |>
+  count(uniqueid, name = "monthly_reports_received")
+
+count_monthly_due_dates <- function(start_date, end_date) {
+  if (is.na(start_date) || is.na(end_date) || end_date < start_date) return(0L)
+  sum(as.integer(format(seq(start_date, end_date, by = "day"), "%d")) == monthly_due_day)
+}
+
+last_monthly_due_date <- function(start_date, end_date) {
+  if (is.na(start_date) || is.na(end_date) || end_date < start_date) return(as.Date(NA))
+  dates <- seq(start_date, end_date, by = "day")
+  dates <- dates[as.integer(format(dates, "%d")) == monthly_due_day]
+  if (length(dates) == 0) as.Date(NA) else max(dates)
+}
+
+progress <- enrolment |>
+  left_join(method_stops, by = "uniqueid") |>
+  left_join(daily_counts, by = "uniqueid") |>
+  left_join(monthly_counts, by = "uniqueid") |>
+  mutate(
+    planned_end_date = enrollment_date + expected_study_days - 1L,
+    observation_end_date = pmin(
+      planned_end_date, data_cutoff, coalesce(method_stop_date, data_cutoff),
+      na.rm = TRUE
+    ),
+    expected_daily_reports = pmax(0L, as.integer(observation_end_date - enrollment_date) + 1L),
+    daily_reports_received = replace_na(daily_reports_received, 0L),
+    monthly_reports_received = replace_na(monthly_reports_received, 0L),
+    expected_monthly_reports = map2_int(
+      enrollment_date, observation_end_date, count_monthly_due_dates
+    ),
+    last_monthly_report_due = as.Date(map2_dbl(
+      enrollment_date, observation_end_date,
+      ~ as.numeric(last_monthly_due_date(.x, .y))
+    ), origin = "1970-01-01"),
+    daily_completion = if_else(
+      expected_daily_reports > 0,
+      daily_reports_received / expected_daily_reports,
+      NA_real_
+    ),
+    monthly_completion = if_else(
+      expected_monthly_reports > 0,
+      monthly_reports_received / expected_monthly_reports,
+      NA_real_
+    ),
+    status = case_when(
+      !is.na(method_stop_date) & method_stop_date <= data_cutoff ~ "Stopped method / follow-up ended",
+      planned_end_date <= data_cutoff ~ followup_complete_label,
+      daily_reports_received == 0 ~ "Enrolled — no daily report",
+      TRUE ~ "Active follow-up"
+    )
+  )
+
+current_missing_streak <- function(start_date, end_date, received_dates) {
+  if (is.na(start_date) || is.na(end_date) || end_date < start_date) return(0L)
+  due_dates <- seq(start_date, end_date, by = "day")
+  missing <- !due_dates %in% received_dates
+  streak <- rle(rev(missing))
+  if (length(streak$values) == 0 || !streak$values[[1]]) 0L else streak$lengths[[1]]
+}
+
+received_dates_by_id <- split(cimc$date, cimc$uniqueid)
+progress$current_consecutive_missed_days <- map2_int(
+  progress$uniqueid,
+  progress$observation_end_date,
+  function(uid, end_date) {
+    received <- received_dates_by_id[[uid]]
+    if (is.null(received)) received <- as.Date(character())
+    current_missing_streak(
+      progress$enrollment_date[progress$uniqueid == uid], end_date, received
+    )
+  }
+)
+
+progress <- progress |>
+  mutate(
+    preferred_missed_reminder = case_when(
+      !is.na(missed_days_reminder_method) ~ missed_days_reminder_method,
+      str_detect(coalesce(daily_reminder_method, ""), "whatsapp") ~ "whatsapp",
+      str_detect(coalesce(daily_reminder_method, ""), "text_message_sms") ~ "text_message_sms",
+      str_detect(coalesce(daily_reminder_method, ""), "email") ~ "email",
+      TRUE ~ daily_reminder_method
+    ),
+    reminder_contact = case_when(
+      preferred_missed_reminder == "email" ~ email,
+      preferred_missed_reminder %in% c("whatsapp", "text_message_sms") ~ phone,
+      TRUE ~ coalesce(phone, email)
+    )
+  )
+
+# Operational exports are regenerated whenever the dashboard is rendered.
+reminder_targets <- progress |>
+  filter(
+    status == "Active follow-up",
+    current_consecutive_missed_days >= missed_days_threshold
+  ) |>
+  transmute(
+    participant_id = uniqueid, organization, site,
+    current_consecutive_missed_days, last_report_date,
+    reminder_method = preferred_missed_reminder, reminder_contact,
+    daily_completion
+  ) |>
+  arrange(desc(current_consecutive_missed_days), site, participant_id)
+
+eligible_not_enrolled <- recruitment |>
+  filter(
+    eligibility_status == "eligible",
+    as.integer(data_cutoff - recruitment_date) >= config$monitoring$eligible_not_enrolled_after_days
+  ) |>
+  anti_join(enrolment, by = "uniqueid") |>
+  transmute(
+    participant_id = uniqueid, organization, site, recruitment_date,
+    days_since_recruitment = as.integer(data_cutoff - recruitment_date),
+    planned_enrollment_date, phone, email, reminder, notes
+  ) |>
+  arrange(desc(days_since_recruitment), site)
+
+no_daily_targets <- progress |>
+  filter(
+    daily_reports_received == 0,
+    as.integer(data_cutoff - enrollment_date) >= config$monitoring$no_daily_report_after_days,
+    status != "Stopped method / follow-up ended"
+  ) |>
+  transmute(
+    participant_id = uniqueid, organization, site, enrollment_date,
+    days_since_enrollment = as.integer(data_cutoff - enrollment_date),
+    daily_reminder_method, phone, email
+  ) |>
+  arrange(desc(days_since_enrollment), site)
+
+monthly_due_targets <- progress |>
+  filter(
+    expected_monthly_reports > monthly_reports_received,
+    !is.na(last_monthly_report_due),
+    as.integer(data_cutoff - last_monthly_report_due) >= config$monitoring$monthly_report_grace_days
+  ) |>
+  transmute(
+    participant_id = uniqueid, organization, site,
+    expected_monthly_reports, monthly_reports_received,
+    monthly_reports_missing = expected_monthly_reports - monthly_reports_received,
+    last_monthly_report_due, reminder_method = preferred_missed_reminder,
+    reminder_contact
+  ) |>
+  arrange(desc(monthly_reports_missing), site, participant_id)
+
+write_csv(reminder_targets, "reminder_targets_3_consecutive_missed_days.csv", na = "")
+write_csv(eligible_not_enrolled, "eligible_not_enrolled_targets.csv", na = "")
+write_csv(no_daily_targets, "enrolled_no_daily_submission_targets.csv", na = "")
+write_csv(monthly_due_targets, "monthly_report_due_targets.csv", na = "")
+write_csv(
+  progress |>
+    transmute(
+      participant_id = uniqueid, organization, site, enrollment_date,
+      planned_end_date, status, daily_reports_received, expected_daily_reports,
+      daily_completion, monthly_reports_received, expected_monthly_reports,
+      monthly_completion, current_consecutive_missed_days, last_report_date,
+      method_stop_date
+    ),
+  "participant_progress_summary.csv", na = ""
+)
+
+n_screened <- nrow(recruitment)
+n_eligible <- sum(recruitment$eligibility_status == "eligible", na.rm = TRUE)
+n_enrolled <- nrow(enrolment)
+n_active <- sum(progress$status == "Active follow-up")
+n_reached_followup <- sum(progress$status == followup_complete_label)
+overall_daily_completion <- sum(progress$daily_reports_received) / sum(progress$expected_daily_reports)
+overall_monthly_completion <- sum(progress$monthly_reports_received) / sum(progress$expected_monthly_reports)
+```
+
+Data are current through `r format(data_cutoff, "%d %B %Y")`. This front page is operational: it shows recruitment flow, follow-up coverage, and participants requiring action. Counts use linked participant IDs across the recruitment, enrolment, and CIMC forms.
+
+**Current source.** `r data_source_label`; staged at `r data_prepared_at`. Change `data_source.mode` in `dashboard_config.yml` to switch between development and production ingestion.
+
+**What.** This page gives the study team a current operational picture of recruitment, enrolment, follow-up and missing reports.
+
+**How.** Records are linked by participant ID. Expected reports run from enrolment to the earliest of the configured follow-up end, data cutoff, or recorded method stop. The action lists apply the thresholds documented in `dashboard_config.yml`.
+
+**Why.** It supports day-to-day decisions: whether recruitment is on target, whether follow-up is being sustained, and which participants may need timely contact. It is a monitoring page, not a clinical outcomes analysis.
+
+```{r}
+#| label: monitoring-kpis
+#| results: asis
+
+kpi <- function(label, value, note) {
+  tags$div(
+    class = "monitor-kpi",
+    tags$div(class = "monitor-kpi-label", label),
+    tags$div(class = "monitor-kpi-value", value),
+    tags$div(class = "monitor-kpi-note", note)
+  )
+}
+
+cards <- tags$div(
+  class = "monitor-kpis",
+  kpi("Screened", comma(n_screened), "Recruitment forms"),
+  kpi("Eligible", comma(n_eligible), percent(n_eligible / n_screened, accuracy = .1)),
+  kpi("Enrolled", comma(n_enrolled), paste0(percent(n_enrolled / n_eligible, accuracy = .1), " of eligible")),
+  kpi("Active follow-up", comma(n_active), paste("Before day", expected_study_days)),
+  kpi(followup_complete_label, comma(n_reached_followup), "Observation window reached"),
+  kpi("Daily completion", percent(overall_daily_completion, accuracy = .1), "Reports received / expected"),
+  kpi("Monthly completion", percent(overall_monthly_completion, accuracy = .1), "Due monthly sections"),
+  kpi("Reminder targets", comma(nrow(reminder_targets)), paste0("≥", missed_days_threshold, " consecutive missed days")),
+  kpi("Data source", str_to_title(data_mode), data_prepared_at)
+)
+
+cat("```{=html}\n", as.character(cards), "\n```\n", sep = "")
+```
+
+## Recruitment funnel
+
+**What it shows.** Unique people at successive stages from screening through daily reporting and completion of the observation window.
+
+**How it is calculated.** A person appears in every stage they have reached, so this is a cumulative funnel rather than a set of mutually exclusive groups.
+
+**Why it helps.** The largest drop between adjacent stages identifies where recruitment or onboarding may need attention.
+
+```{r}
+#| label: recruitment-funnel
+#| fig-height: 4.5
+#| fig-width: 10
+
+funnel <- tibble(
+  stage = factor(
+    c("Screened", "Eligible", "Enrolled", "Submitted ≥1 daily form", followup_complete_label),
+    levels = rev(c("Screened", "Eligible", "Enrolled", "Submitted ≥1 daily form", followup_complete_label))
+  ),
+  participants = c(
+    n_screened, n_eligible, n_enrolled,
+    sum(progress$daily_reports_received > 0), n_reached_followup
+  )
+) |>
+  mutate(percent_screened = participants / n_screened)
+
+ggplot(funnel, aes(participants, stage)) +
+  geom_col(fill = "#167c77", width = .66) +
+  geom_text(
+    aes(label = sprintf("%s  (%s)", comma(participants), percent(percent_screened, accuracy = .1))),
+    hjust = -.08, size = 3.7
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0, .25))) +
+  labs(x = "Participants", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Enrolment against site targets
+
+**What it shows.** Enrolment achieved at each site relative to its configured target.
+
+**How it is calculated.** Enrolled participants are counted once at their enrolment site and divided by that site's target in `dashboard_config.yml`.
+
+**Why it helps.** It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrolment.
+
+```{r}
+#| label: site-enrolment-targets
+#| fig-height: 4.2
+#| fig-width: 9
+
+site_progress <- enrolment |>
+  count(organization, site, name = "enrolled") |>
+  mutate(
+    target = as.integer(site_targets[organization]),
+    target_completion = enrolled / target
+  )
+
+ggplot(site_progress, aes(target_completion, site)) +
+  geom_vline(xintercept = 1, colour = "#8c4f7d", linewidth = .7) +
+  geom_col(fill = "#167c77", width = .58) +
+  geom_text(
+    aes(label = sprintf("%s / %s  (%s)", enrolled, target, percent(target_completion, accuracy = 1))),
+    hjust = -.08, size = 3.7
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .25))) +
+  labs(x = "Enrolment target reached", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Participant progress
+
+**What it shows.** The current follow-up status of enrolled participants within each site.
+
+**How it is calculated.** Status uses the configured observation window and method-discontinuation responses. “`r followup_complete_label`” means the time window elapsed; it does not require perfect questionnaire completion.
+
+**Why it helps.** It separates participants who remain under active follow-up from those who have completed, stopped, or never begun daily reporting.
+
+```{r}
+#| label: participant-status
+#| fig-height: 4.5
+#| fig-width: 10
+
+status_levels <- c(
+  "Active follow-up", followup_complete_label, "Enrolled — no daily report",
+  "Stopped method / follow-up ended"
+)
+
+status_by_site <- progress |>
+  count(site, status) |>
+  complete(site, status = status_levels, fill = list(n = 0L)) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n), status = factor(status, levels = status_levels)) |>
+  ungroup()
+
+ggplot(status_by_site, aes(percent, site, fill = status)) +
+  geom_col(width = .62) +
+  geom_text(
+    aes(label = if_else(percent >= .07, paste0(n, "\n", percent(percent, accuracy = 1)), "")),
+    position = position_stack(vjust = .5), size = 3, lineheight = .9
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = 0)) +
+  scale_fill_manual(values = c("#167c77", "#8fc5c1", "#d8c8a5", "#8c4f7d")) +
+  labs(x = "Percent of enrolled participants", y = NULL, fill = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Daily reporting over calendar time
+
+**What it shows.** The proportion of expected daily reports actually received in each site-week.
+
+**How it is calculated.** Each point divides received participant-days by expected participant-days among people under observation that week.
+
+**Why it helps.** It separates growth in the enrolled cohort from genuine reporting adherence and makes site-specific implementation changes visible over time.
+
+```{r}
+#| label: weekly-daily-completion
+#| fig-height: 5
+#| fig-width: 10
+
+due_calendar <- progress |>
+  select(uniqueid, site, enrollment_date, observation_end_date) |>
+  pmap_dfr(function(uniqueid, site, enrollment_date, observation_end_date) {
+    tibble(uniqueid = uniqueid, site = site, date = seq(enrollment_date, observation_end_date, by = "day"))
+  }) |>
+  mutate(
+    received = paste0(uniqueid, date) %in% paste0(cimc$uniqueid, cimc$date),
+    week = as.Date(cut(date, "week", start.on.monday = TRUE))
+  ) |>
+  group_by(site, week) |>
+  summarise(expected = n(), received = sum(received), completion = received / expected, .groups = "drop")
+
+ggplot(due_calendar, aes(week, completion, colour = site, linetype = site)) +
+  geom_line(linewidth = .8) +
+  geom_point(size = 1.8) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(x = NULL, y = "Daily reports received / expected", colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.minor = element_blank())
+```
+
+## Completion-pattern UpSet chart
+
+**What it shows.** Exact combinations of reporting and follow-up milestones reached by participants.
+
+**How it is calculated.** The upper bars count participants in each combination; filled dots identify the milestones included in that combination.
+
+**Why it helps.** It shows whether apparent progress is driven by complete follow-up, strong daily adherence, monthly completion, or only one of those elements.
+
+```{r}
+#| label: completion-upset
+#| fig-height: 7
+#| fig-width: 11
+
+completion_sets <- progress |>
+  transmute(
+    participant_id = uniqueid,
+    `Started daily reporting` = daily_reports_received > 0,
+    `At least 80% daily` = daily_completion >= config$monitoring$good_daily_completion_threshold,
+    `All due monthly` = expected_monthly_reports > 0 & monthly_reports_received >= expected_monthly_reports,
+    !!followup_complete_label := planned_end_date <= data_cutoff
+  )
+
+set_columns <- setdiff(names(completion_sets), "participant_id")
+intersection_counts <- completion_sets |>
+  count(across(all_of(set_columns)), name = "participants") |>
+  arrange(desc(participants)) |>
+  slice_head(n = config$display$upset_max_intersections) |>
+  mutate(intersection_id = row_number())
+
+matrix_data <- intersection_counts |>
+  pivot_longer(all_of(set_columns), names_to = "milestone", values_to = "included") |>
+  mutate(
+    milestone = factor(milestone, levels = rev(set_columns)),
+    milestone_number = as.numeric(milestone)
+  )
+
+connection_data <- matrix_data |>
+  filter(included) |>
+  group_by(intersection_id) |>
+  summarise(ymin = min(milestone_number), ymax = max(milestone_number), .groups = "drop")
+
+upset_bars <- ggplot(intersection_counts, aes(intersection_id, participants)) +
+  geom_col(fill = "#167c77", width = .68) +
+  geom_text(aes(label = participants), vjust = -.3, size = 3.3) +
+  scale_x_continuous(breaks = intersection_counts$intersection_id, labels = NULL) +
+  scale_y_continuous(expand = expansion(mult = c(0, .14))) +
+  labs(x = NULL, y = "Participants") +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor = element_blank())
+
+upset_matrix <- ggplot(matrix_data, aes(intersection_id, milestone_number)) +
+  geom_segment(
+    data = connection_data,
+    aes(x = intersection_id, xend = intersection_id, y = ymin, yend = ymax),
+    inherit.aes = FALSE, colour = "#455553", linewidth = .6
+  ) +
+  geom_point(colour = "#d5dddc", size = 3) +
+  geom_point(data = filter(matrix_data, included), colour = "#167c77", size = 3.5) +
+  scale_x_continuous(breaks = intersection_counts$intersection_id) +
+  scale_y_continuous(
+    breaks = seq_along(levels(matrix_data$milestone)),
+    labels = levels(matrix_data$milestone)
+  ) +
+  labs(x = "Exact completion-pattern intersection", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid = element_blank())
+
+upset_bars / upset_matrix + plot_layout(heights = c(1.7, 1))
+```
+
+## Action lists
+
+**What they contain.** Participant-level lists for specific follow-up actions, plus a complete operational progress file.
+
+**How they are produced.** The CSVs are rebuilt from the current data every time the dashboard renders using the configured thresholds.
+
+**Why they help.** They turn dashboard signals into practical worklists. They contain operational identifiers and dummy contact details here; production access should follow the study's role-based confidentiality controls.
+
+```{r}
+#| label: action-downloads
+#| results: asis
+
+download_card <- function(title, count, file, detail) {
+  action <- if (publish_action_lists) {
+    tags$a(href = file, download = file, "Download CSV")
+  } else {
+    tags$div(
+      class = "small text-muted",
+      "Generated locally; publication is disabled for production data."
+    )
+  }
+  tags$div(
+    class = "monitor-download",
+    tags$strong(paste0(title, " — ", count)),
+    tags$div(class = "small text-muted", detail),
+    action
+  )
+}
+
+downloads <- tags$div(
+  class = "monitor-downloads",
+  download_card(
+    "Consecutive missed daily reports", nrow(reminder_targets),
+    "reminder_targets_3_consecutive_missed_days.csv",
+    paste0("Active participants missing at least ", missed_days_threshold, " consecutive due days")
+  ),
+  download_card(
+    "Eligible but not enrolled", nrow(eligible_not_enrolled),
+    "eligible_not_enrolled_targets.csv",
+    paste0("Eligible for at least ", config$monitoring$eligible_not_enrolled_after_days, " days without an enrolment record")
+  ),
+  download_card(
+    "Enrolled with no daily report", nrow(no_daily_targets),
+    "enrolled_no_daily_submission_targets.csv",
+    "Enrolled participants who have not started daily reporting"
+  ),
+  download_card(
+    "Overdue monthly sections", nrow(monthly_due_targets),
+    "monthly_report_due_targets.csv",
+    "Calendar-month sections still missing after the configured grace period"
+  ),
+  download_card(
+    "Full participant progress", nrow(progress),
+    "participant_progress_summary.csv",
+    "One operational progress row per enrolled participant"
+  )
+)
+
+cat("```{=html}\n", as.character(downloads), "\n```\n", sep = "")
+```
+
+### Current consecutive-miss reminder list
+
+```{r}
+#| label: reminder-target-preview
+#| results: asis
+
+preview_table <- reminder_targets |>
+  slice_head(n = config$monitoring$action_list_preview_rows) |>
+  transmute(
+    `Participant ID` = participant_id,
+    Site = site,
+    `Missed days` = current_consecutive_missed_days,
+    `Last report` = last_report_date,
+    `Reminder method` = reminder_method,
+    Contact = reminder_contact,
+    `Daily completion` = percent(daily_completion, accuracy = .1)
+  ) |>
+  kable(format = "html", align = c("l", "l", "r", "l", "l", "l", "r"))
+
+cat('<div class="monitor-table-scroll">', preview_table, '</div>', sep = "\n")
+```
+
+## Monitoring definitions
+
+- **Expected daily reports** run from enrolment through the earliest of the configured follow-up day (`r expected_study_days`), the data cutoff, or a recorded method stop date.
+- **Monthly reports expected** are calendar-month sections due on configured day `r monthly_due_day` of a month within that observed interval. The supplied setting matches the revised CIMC form.
+- **Current consecutive missed days** count backwards from the participant's latest due day. A submitted form breaks the streak.
+- **`r followup_complete_label`** describes elapsed follow-up time, not questionnaire adherence.
+- All thresholds and site targets are editable in `dashboard_config.yml`.

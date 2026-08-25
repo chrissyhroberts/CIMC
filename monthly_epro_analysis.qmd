@@ -1,0 +1,914 @@
+---
+title: "Monthly bleeding and pain"
+subtitle: "Monthly ePRO results and daily–monthly consistency"
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    code-summary: "Show R code"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+{{< include _epro_shared.qmd >}}
+
+## Monthly questionnaire overview
+
+The monthly form summarises the preceding month and asks about changes, predictability, management, and impacts. Its unit of analysis is a participant-month.
+
+**What.** This section summarises the participant's overall experience of the preceding month.
+
+**How.** Each submitted participant-month is one observation. A participant contributing six monthly forms contributes six observations, and the confidence intervals resample those records together as one participant cluster.
+
+**Why.** Monthly questions capture perceived change, predictability, management burden, and impact—concepts that are difficult to reconstruct from isolated daily answers alone.
+
+```{r}
+#| label: monthly-helpers
+
+summarise_codes <- function(data, variable, question, labels) {
+  clustered_factor_summary(
+    data,
+    response_factor = factor(data[[variable]], levels = seq_along(labels), labels = labels),
+    question = question,
+    count_name = "records"
+  ) |>
+    mutate(
+      code = response_order,
+      response = factor(response, levels = labels)
+    )
+}
+
+plot_monthly_facets <- function(data, height = 8) {
+  ggplot(data, aes(percent, response)) +
+    geom_col(fill = "#167c77", width = .68) +
+    geom_errorbar(
+      aes(xmin = ci_low, xmax = ci_high),
+      orientation = "y",
+      height = .18,
+      linewidth = .5
+    ) +
+    geom_text(
+      aes(label = sprintf("%s  %s", records, percent(percent, accuracy = .1))),
+      hjust = -.05, size = 3.3
+    ) +
+    facet_grid(question ~ ., scales = "free_y", space = "free_y") +
+    scale_x_continuous(labels = percent_format(accuracy = 1),
+                       expand = expansion(mult = c(0, .25))) +
+    labs(
+      x = "Percent within the relevant participant-months",
+      y = NULL,
+      caption = "Whiskers are participant-clustered 95% confidence intervals."
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+          strip.text.y = element_text(angle = 0, face = "bold"),
+          plot.margin = margin(8, 48, 8, 8))
+}
+
+plot_directional_three <- function(data, question_levels, caption) {
+  directional_summary <- data |>
+    filter(question %in% question_levels, code %in% 1:3) |>
+    mutate(question = factor(question, levels = rev(question_levels))) |>
+    arrange(question, code) |>
+    group_by(question) |>
+    summarise(
+      left_response = as.character(response[code == 1]),
+      left_records = records[code == 1],
+      left_percent = percent[code == 1],
+      neutral_response = as.character(response[code == 2]),
+      neutral_records = records[code == 2],
+      neutral_percent = percent[code == 2],
+      right_response = as.character(response[code == 3]),
+      right_records = records[code == 3],
+      right_percent = percent[code == 3],
+      .groups = "drop"
+    ) |>
+    mutate(y = as.numeric(question))
+
+  segments <- bind_rows(
+    directional_summary |>
+      transmute(
+        question, y, segment = "First response",
+        xmin = -neutral_percent / 2 - left_percent,
+        xmax = -neutral_percent / 2,
+        label_x = (xmin + xmax) / 2,
+        label = sprintf(
+          "%s\nn=%s · %s",
+          left_response, left_records, scales::percent(left_percent, accuracy = .1)
+        )
+      ),
+    directional_summary |>
+      transmute(
+        question, y, segment = "About the same",
+        xmin = -neutral_percent / 2,
+        xmax = neutral_percent / 2,
+        label_x = 0,
+        label = sprintf(
+          "%s\nn=%s · %s",
+          neutral_response, neutral_records, scales::percent(neutral_percent, accuracy = .1)
+        )
+      ),
+    directional_summary |>
+      transmute(
+        question, y, segment = "Third response",
+        xmin = neutral_percent / 2,
+        xmax = neutral_percent / 2 + right_percent,
+        label_x = (xmin + xmax) / 2,
+        label = sprintf(
+          "%s\nn=%s · %s",
+          right_response, right_records, scales::percent(right_percent, accuracy = .1)
+        )
+      )
+  )
+
+  ggplot(segments) +
+    geom_vline(xintercept = 0, colour = "#5f6b69", linewidth = .5) +
+    geom_rect(
+      aes(
+        xmin = xmin, xmax = xmax,
+        ymin = y - .36, ymax = y + .36,
+        fill = segment
+      )
+    ) +
+    geom_text(
+      aes(label_x, y, label = label, colour = segment),
+      size = 3.05,
+      lineheight = .9
+    ) +
+    scale_fill_manual(
+      values = c(
+        "First response" = "#8fc5c1",
+        "About the same" = "#dce5e3",
+        "Third response" = "#167c77"
+      ),
+      guide = "none"
+    ) +
+    scale_colour_manual(
+      values = c(
+        "First response" = "#1f2524",
+        "About the same" = "#1f2524",
+        "Third response" = "#ffffff"
+      ),
+      guide = "none"
+    ) +
+    scale_x_continuous(
+      limits = c(-1, 1),
+      breaks = seq(-1, 1, by = .25),
+      labels = function(value) scales::percent(abs(value), accuracy = 1)
+    ) +
+    scale_y_continuous(
+      breaks = seq_along(levels(directional_summary$question)),
+      labels = levels(directional_summary$question),
+      expand = expansion(add = .55)
+    ) +
+    labs(
+      x = "Response distribution centred on ‘about the same’",
+      y = NULL,
+      caption = caption
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.caption = element_text(hjust = 0),
+      plot.margin = margin(8, 18, 8, 8)
+    )
+}
+
+plot_complete_composition <- function(data, question_levels, caption) {
+  plot_data <- data |>
+    filter(question %in% question_levels) |>
+    mutate(
+      question = factor(question, levels = rev(question_levels)),
+      response_role = factor(response_order, levels = 1:4)
+    )
+
+  ggplot(plot_data, aes(percent, question, fill = response_role)) +
+    geom_col(width = .62, position = position_stack(reverse = TRUE)) +
+    geom_text(
+      aes(
+        colour = response_role,
+        label = if_else(
+          percent >= .055,
+          sprintf("%s\nn=%s · %s", response, records, scales::percent(percent, accuracy = .1)),
+          ""
+        )
+      ),
+      position = position_stack(vjust = .5, reverse = TRUE),
+      size = 2.95,
+      lineheight = .9
+    ) +
+    scale_fill_manual(
+      values = c(`1` = "#dce5e3", `2` = "#8fc5c1", `3` = "#167c77", `4` = "#d8c8a5"),
+      guide = "none",
+      na.value = "#d8c8a5"
+    ) +
+    scale_colour_manual(
+      values = c(`1` = "#1f2524", `2` = "#1f2524", `3` = "#ffffff", `4` = "#1f2524"),
+      guide = "none",
+      na.value = "#1f2524"
+    ) +
+    scale_x_continuous(
+      limits = c(0, 1),
+      breaks = seq(0, 1, by = .25),
+      labels = percent_format(accuracy = 1),
+      expand = expansion(mult = 0)
+    ) +
+    labs(
+      x = "Percent within the relevant participant-months",
+      y = NULL,
+      caption = caption
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid.major.y = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.caption = element_text(hjust = 0),
+      plot.margin = margin(8, 14, 8, 8)
+    )
+}
+```
+
+## Monthly occurrence
+
+**What it shows.** The proportion of participant-months reporting any bleeding, pain, or clots. Clots use only months in which bleeding was reported.
+
+**Why it matters.** This is a high-level monthly prevalence view and a useful bridge between detailed daily reporting and participants' retrospective monthly experience.
+
+```{r}
+#| label: monthly-occurrence
+#| fig-height: 5.2
+#| fig-width: 12
+
+monthly_occurrence <- bind_rows(
+  summarise_response(monthly_report, "bleeding", "Any menstrual bleeding"),
+  summarise_response(monthly_report, "pain", "Any menstrual pain"),
+  summarise_response(filter(monthly_report, menstrual_bleeding_last_month == 1),
+                     "clots", "Clots among months with bleeding")
+) |>
+  rename(records = participants)
+
+plot_complete_composition(
+  monthly_occurrence,
+  question_levels = c(
+    "Any menstrual bleeding",
+    "Any menstrual pain",
+    "Clots among months with bleeding"
+  ),
+  caption = paste(
+    "Each row uses its own relevant denominator and sums to 100%.",
+    "Participant-clustered 95% confidence intervals are listed below."
+  )
+)
+```
+
+```{r}
+#| label: monthly-occurrence-ci-table
+
+monthly_occurrence |>
+  transmute(
+    Question = question,
+    Response = response,
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+### Monthly symptom occurrence by study site
+
+**What it shows.** This selected site view compares monthly reports of bleeding, pain, and—among bleeding-positive months—clots.
+
+**How it is calculated.** Each bar uses participant-months from one site and the relevant question-specific denominator. Confidence intervals keep repeated monthly reports from the same participant together.
+
+**Why it helps.** It reveals whether the pooled monthly result is broadly shared across sites or dominated by one site. Differences may reflect participant mix, follow-up timing, reporting practice, or chance.
+
+```{r}
+#| label: monthly-occurrence-by-site
+#| fig-height: 5.5
+#| fig-width: 12
+
+if (isTRUE(config$site_breakdowns$monthly_symptom_occurrence)) {
+  monthly_site_occurrence <- bind_rows(
+    summarise_response_by_site(monthly_report, "bleeding", "Any menstrual bleeding"),
+    summarise_response_by_site(monthly_report, "pain", "Any menstrual pain"),
+    summarise_response_by_site(
+      filter(monthly_report, menstrual_bleeding_last_month == 1),
+      "clots",
+      "Clots among months with bleeding"
+    )
+  ) |>
+    filter(response == "Yes") |>
+    mutate(site = factor(site, levels = unname(site_labels)))
+
+  print(
+    ggplot(monthly_site_occurrence, aes(percent, site, fill = question)) +
+      geom_col(position = position_dodge(width = .78), width = .68) +
+      geom_errorbar(
+        aes(xmin = ci_low, xmax = ci_high), orientation = "y",
+        position = position_dodge(width = .78), height = .16, linewidth = .5
+      ) +
+      geom_text(
+        aes(label = percent(percent, accuracy = .1)),
+        position = position_dodge(width = .78), hjust = -.1, vjust = -.8, size = 3
+      ) +
+      scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .2))) +
+      labs(x = "Percent within relevant participant-months", y = NULL, fill = NULL,
+           caption = "Whiskers are participant-clustered 95% confidence intervals within site.") +
+      theme_minimal(base_size = 12) +
+      theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+  )
+}
+```
+
+## Bleeding products and materials
+
+Respondents could select up to two products or materials. The denominator is participant-months with bleeding, so percentages may sum to more than 100%.
+
+**How to read it.** Each bar is the percentage of bleeding-positive participant-months selecting that product; products are not mutually exclusive. The result describes management choices, not the amount of bleeding by itself.
+
+```{r}
+#| label: monthly-products
+#| fig-height: 5.8
+#| fig-width: 10
+
+product_labels <- c(
+  `1` = "Pad", `2` = "Tampon", `3` = "Panty liner",
+  `4` = "Regular underwear only", `5` = "Absorbent period underwear",
+  `6` = "Cloth, towel, or rag", `7` = "Menstrual cup or disc",
+  `8` = "Toilet paper", `9` = "Loose cotton or wool",
+  `10` = "No product or material", `11` = "Other"
+)
+
+monthly_bleeding <- monthly_data |> filter(menstrual_bleeding_last_month == 1)
+product_results <- bind_rows(lapply(names(product_labels), function(product_code) {
+  selected <- str_detect(
+    coalesce(monthly_bleeding$bleeding_product_material, ""),
+    paste0("(^| )", product_code, "( |$)")
+  )
+  clustered_factor_summary(
+    monthly_bleeding,
+    response_factor = factor(
+      selected,
+      levels = c(FALSE, TRUE),
+      labels = c("Not selected", "Selected")
+    ),
+    question = unname(product_labels[product_code]),
+    count_name = "records"
+  ) |>
+    filter(response == "Selected") |>
+    transmute(
+      product = product_code,
+      response = unname(product_labels[product_code]),
+      records,
+      percent,
+      ci_low,
+      ci_high
+    )
+})) |>
+  arrange(percent)
+
+ggplot(product_results, aes(percent, reorder(response, percent))) +
+  geom_col(fill = "#167c77", width = .68) +
+  geom_errorbar(
+    aes(xmin = ci_low, xmax = ci_high),
+    orientation = "y",
+    height = .18,
+    linewidth = .5
+  ) +
+  geom_text(
+    aes(
+      x = ci_high + .015,
+      label = sprintf("%s  %s", records, percent(percent, accuracy = .1))
+    ),
+    hjust = 0,
+    size = 3.4
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1),
+                     expand = expansion(mult = c(0, .16))) +
+  labs(
+    x = "Percent of participant-months with bleeding",
+    y = NULL,
+    caption = "Whiskers are participant-clustered 95% confidence intervals."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+        plot.margin = margin(8, 48, 8, 8))
+```
+
+## Monthly bleeding changes
+
+**What it shows.** The diverging chart places “about the same” at the centre and displays the two directional responses on either side. Every measure therefore uses one common horizontal scale.
+
+**Why it matters.** The layout makes internal comparators visible: for example, the team can compare the balance of lighter versus heavier bleeding and easier versus harder predictability without reading separate charts.
+
+```{r}
+#| label: monthly-bleeding-changes-directional
+#| fig-height: 6.2
+#| fig-width: 12
+
+mb <- monthly_data |> filter(menstrual_bleeding_last_month == 1)
+bleeding_changes <- bind_rows(
+  summarise_codes(mb, "bleeding_days_change", "Number of bleeding days",
+                  c("Fewer", "About the same", "More")),
+  summarise_codes(mb, "bleeding_spacing_change", "Spacing between bleeding days",
+                  c("Closer together", "About the same", "Further apart")),
+  summarise_codes(mb, "bleeding_amount_change", "Amount of bleeding",
+                  c("Lighter", "About the same", "Heavier")),
+  summarise_codes(mb, "bleeding_start_predictability", "Predicting when bleeding starts",
+                  c("Easier", "About the same", "Harder")),
+  summarise_codes(mb, "bleeding_stop_predictability", "Predicting when bleeding stops",
+                  c("Easier", "About the same", "Harder")),
+  summarise_codes(mb, "bleeding_color_change", "Bleeding colour",
+                  c("Same", "Somewhat different", "Very different", "Unsure")),
+  summarise_codes(mb, "bleeding_smell_change", "Bleeding smell",
+                  c("Same", "Somewhat different", "Very different", "Unsure"))
+)
+
+directional_question_levels <- c(
+  "Number of bleeding days",
+  "Spacing between bleeding days",
+  "Amount of bleeding",
+  "Predicting when bleeding starts",
+  "Predicting when bleeding stops"
+)
+
+directional_summary <- bleeding_changes |>
+  filter(question %in% directional_question_levels) |>
+  mutate(question = factor(question, levels = rev(directional_question_levels))) |>
+  arrange(question, code) |>
+  group_by(question) |>
+  summarise(
+    left_response = as.character(response[code == 1]),
+    left_records = records[code == 1],
+    left_percent = percent[code == 1],
+    neutral_response = as.character(response[code == 2]),
+    neutral_records = records[code == 2],
+    neutral_percent = percent[code == 2],
+    right_response = as.character(response[code == 3]),
+    right_records = records[code == 3],
+    right_percent = percent[code == 3],
+    .groups = "drop"
+  ) |>
+  mutate(y = as.numeric(question))
+
+directional_segments <- bind_rows(
+  directional_summary |>
+    transmute(
+      question, y, segment = "First response",
+      xmin = -neutral_percent / 2 - left_percent,
+      xmax = -neutral_percent / 2,
+      label_x = (xmin + xmax) / 2,
+      label = sprintf(
+        "%s\nn=%s · %s",
+        left_response, left_records, scales::percent(left_percent, accuracy = .1)
+      )
+    ),
+  directional_summary |>
+    transmute(
+      question, y, segment = "About the same",
+      xmin = -neutral_percent / 2,
+      xmax = neutral_percent / 2,
+      label_x = 0,
+      label = sprintf(
+        "%s\nn=%s · %s",
+        neutral_response, neutral_records, scales::percent(neutral_percent, accuracy = .1)
+      )
+    ),
+  directional_summary |>
+    transmute(
+      question, y, segment = "Third response",
+      xmin = neutral_percent / 2,
+      xmax = neutral_percent / 2 + right_percent,
+      label_x = (xmin + xmax) / 2,
+      label = sprintf(
+        "%s\nn=%s · %s",
+        right_response, right_records, scales::percent(right_percent, accuracy = .1)
+      )
+    )
+)
+
+ggplot(directional_segments) +
+  geom_vline(xintercept = 0, colour = "#5f6b69", linewidth = .5) +
+  geom_rect(
+    aes(
+      xmin = xmin, xmax = xmax,
+      ymin = y - .36, ymax = y + .36,
+      fill = segment
+    )
+  ) +
+  geom_text(
+    aes(label_x, y, label = label, colour = segment),
+    size = 3.05,
+    lineheight = .9
+  ) +
+  scale_fill_manual(
+    values = c(
+      "First response" = "#8fc5c1",
+      "About the same" = "#dce5e3",
+      "Third response" = "#167c77"
+    ),
+    guide = "none"
+  ) +
+  scale_colour_manual(
+    values = c(
+      "First response" = "#1f2524",
+      "About the same" = "#1f2524",
+      "Third response" = "#ffffff"
+    ),
+    guide = "none"
+  ) +
+  scale_x_continuous(
+    limits = c(-1, 1),
+    breaks = seq(-1, 1, by = .25),
+    labels = function(value) scales::percent(abs(value), accuracy = 1)
+  ) +
+  scale_y_continuous(
+    breaks = seq_along(levels(directional_summary$question)),
+    labels = levels(directional_summary$question),
+    expand = expansion(add = .55)
+  ) +
+  labs(
+    x = "Response distribution centred on ‘about the same’",
+    y = NULL,
+    caption = "Each row uses participant-months with menstrual bleeding as its denominator."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(hjust = 0),
+    plot.margin = margin(8, 18, 8, 8)
+  )
+```
+
+Colour and smell responses describe degree of difference rather than a left-to-right direction, so they are shown separately as complete compositions.
+
+```{r}
+#| label: monthly-bleeding-changes-difference
+#| fig-height: 3.6
+#| fig-width: 12
+
+difference_changes <- bleeding_changes |>
+  filter(question %in% c("Bleeding colour", "Bleeding smell")) |>
+  mutate(
+    question = factor(question, levels = c("Bleeding smell", "Bleeding colour")),
+    response = factor(
+      response,
+      levels = c("Same", "Somewhat different", "Very different", "Unsure")
+    )
+  )
+
+ggplot(difference_changes, aes(percent, question, fill = response)) +
+  geom_col(width = .62, position = position_stack(reverse = TRUE)) +
+  geom_text(
+    aes(
+      colour = response,
+      label = if_else(
+        percent >= .055,
+        sprintf("%s\nn=%s · %s", response, records, scales::percent(percent, accuracy = .1)),
+        ""
+      )
+    ),
+    position = position_stack(vjust = .5, reverse = TRUE),
+    size = 3.05,
+    lineheight = .9
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Same" = "#dce5e3",
+      "Somewhat different" = "#8fc5c1",
+      "Very different" = "#167c77",
+      "Unsure" = "#d8c8a5"
+    ),
+    guide = "none"
+  ) +
+  scale_colour_manual(
+    values = c(
+      "Same" = "#1f2524",
+      "Somewhat different" = "#1f2524",
+      "Very different" = "#ffffff",
+      "Unsure" = "#1f2524"
+    ),
+    guide = "none"
+  ) +
+  scale_x_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = .25),
+    labels = percent_format(accuracy = 1),
+    expand = expansion(mult = 0)
+  ) +
+  labs(x = "Percent of participant-months with menstrual bleeding", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.margin = margin(8, 14, 8, 8)
+  )
+```
+
+### Monthly bleeding change estimates with 95% confidence intervals
+
+The chart segments above show complete response compositions. Drawing an error bar over every stacked segment would obscure the comparison, so the participant-clustered intervals are provided numerically here.
+
+```{r}
+#| label: monthly-bleeding-change-ci-table
+
+bleeding_changes |>
+  arrange(question, response_order) |>
+  transmute(
+    Measure = question,
+    Response = as.character(response),
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Monthly clot and pain changes
+
+**What it shows.** These questions describe perceived change relative to the participant's prior experience. Each question uses only participant-months for which the underlying symptom was relevant.
+
+**Why it matters.** Direction of change can be more informative for acceptability than simple symptom presence, especially when baseline experiences differ substantially between participants.
+
+```{r}
+#| label: monthly-other-changes-directional
+#| fig-height: 4.2
+#| fig-width: 12
+
+other_changes <- bind_rows(
+  summarise_codes(filter(monthly_data, clots_last_month == 1), "clot_number_change",
+                  "Number of clots", c("Fewer", "About the same", "More", "Unsure")),
+  summarise_codes(filter(monthly_data, clots_last_month == 1), "clot_size_change",
+                  "Clot size", c("Smaller", "About the same", "Larger", "Unsure")),
+  summarise_codes(filter(monthly_data, menstrual_pain_last_month == 1), "pain_severity_change",
+                  "Pain severity", c("Less", "About the same", "More")),
+  summarise_codes(filter(monthly_data, menstrual_pain_last_month == 1), "pain_days_change",
+                  "Number of pain days", c("Fewer", "About the same", "More")),
+  summarise_codes(filter(monthly_data, menstrual_pain_last_month == 1), "pain_location_change",
+                  "Pain locations", c("Same", "Same and different", "Different"))
+)
+
+plot_directional_three(
+  other_changes,
+  question_levels = c("Pain severity", "Number of pain days"),
+  caption = "Each row uses pain-positive participant-months as its denominator."
+)
+```
+
+Clot questions include an “unsure” response, and the pain-location question describes type of difference rather than a single direction. They are therefore shown as complete 100% compositions.
+
+```{r}
+#| label: monthly-other-changes-composition
+#| fig-height: 6.5
+#| fig-width: 12
+
+plot_complete_composition(
+  other_changes,
+  question_levels = c("Number of clots", "Clot size", "Pain locations"),
+  caption = "Clot rows use clot-positive participant-months; pain locations use pain-positive months."
+)
+```
+
+```{r}
+#| label: monthly-other-change-ci-table
+
+other_changes |>
+  arrange(question, response_order) |>
+  transmute(
+    Measure = question,
+    Response = as.character(response),
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Monthly management and activity impacts
+
+**What it shows.** These responses describe whether symptom management and daily activities felt easier, unchanged, harder, or mixed.
+
+**Why it matters.** A programme can change symptoms without changing burden in the same direction. These measures connect clinical experiences to practical acceptability.
+
+```{r}
+#| label: monthly-impact
+#| fig-height: 6
+#| fig-width: 12
+
+impact_labels <- c("Easier", "About the same", "Harder", "Mixed: easier and harder")
+impact_results <- bind_rows(
+  summarise_codes(monthly_data, "bleeding_management_impact", "Managing bleeding", impact_labels),
+  summarise_codes(monthly_data, "pain_management_impact", "Managing pain", impact_labels),
+  summarise_codes(monthly_data, "bleeding_daily_activities_impact", "Bleeding impact on daily activities", impact_labels),
+  summarise_codes(monthly_data, "pain_daily_activities_impact", "Pain impact on daily activities", impact_labels)
+)
+plot_complete_composition(
+  impact_results,
+  question_levels = c(
+    "Managing bleeding",
+    "Managing pain",
+    "Bleeding impact on daily activities",
+    "Pain impact on daily activities"
+  ),
+  caption = "The mixed response is retained as a separate category rather than forced onto an easier–harder direction."
+)
+```
+
+```{r}
+#| label: monthly-impact-ci-table
+
+impact_results |>
+  arrange(question, response_order) |>
+  transmute(
+    Measure = question,
+    Response = as.character(response),
+    `Participant-months` = records,
+    `Estimate (95% CI)` = sprintf(
+      "%s (%s to %s)",
+      scales::percent(percent, accuracy = .1),
+      scales::percent(ci_low, accuracy = .1),
+      scales::percent(ci_high, accuracy = .1)
+    )
+  ) |>
+  kable(align = c("l", "l", "r", "r"))
+```
+
+## Daily–monthly consistency
+
+This descriptive comparison links each monthly submission to that participant's daily submissions in the same calendar month.
+
+**What it shows.** Monthly symptom reporting is compared between participant-months with at least one corresponding positive daily report and those with no positive daily report.
+
+**Why it matters.** Strong agreement supports the idea that daily and monthly instruments are capturing related experiences. Disagreement is not automatically an error: monthly recall, missed daily forms, question wording, and different reference periods can all produce genuine differences.
+
+```{r}
+#| label: daily-monthly-consistency
+#| fig-height: 6
+#| fig-width: 10
+
+daily_by_month <- daily_data |>
+  mutate(reference_month = format(report_date, "%Y-%m")) |>
+  group_by(participant_id, reference_month) |>
+  summarise(
+    daily_submissions = n(),
+    daily_any_bleeding = as.integer(any(menstrual_bleeding_yesterday == 1, na.rm = TRUE)),
+    daily_any_pain = as.integer(any(menstrual_pain_yesterday == 1, na.rm = TRUE)),
+    .groups = "drop"
+  )
+
+linked_months <- monthly_data |>
+  inner_join(daily_by_month, by = c("participant_id", "reference_month"))
+
+summarise_consistency <- function(data, daily_variable, monthly_variable, symptom_label) {
+  bind_rows(lapply(c(0L, 1L), function(daily_value) {
+    relevant_data <- data |>
+      filter(.data[[daily_variable]] == daily_value)
+    clustered_factor_summary(
+      relevant_data,
+      response_factor = factor(
+        relevant_data[[monthly_variable]],
+        levels = c(0, 1),
+        labels = c("No", "Yes")
+      ),
+      question = symptom_label,
+      count_name = "positive_records"
+    ) |>
+      filter(response == "Yes") |>
+      transmute(
+        records = denominator,
+        percent,
+        ci_low,
+        ci_high,
+        symptom = symptom_label,
+        daily_report = if_else(
+          daily_value == 1,
+          "At least one positive daily report",
+          "No positive daily report"
+        )
+      )
+  }))
+}
+
+consistency_plot <- bind_rows(
+  summarise_consistency(
+    linked_months,
+    "daily_any_bleeding",
+    "menstrual_bleeding_last_month",
+    "Monthly bleeding report"
+  ),
+  summarise_consistency(
+    linked_months,
+    "daily_any_pain",
+    "menstrual_pain_last_month",
+    "Monthly pain report"
+  )
+)
+
+ggplot(consistency_plot, aes(percent, daily_report)) +
+  geom_col(fill = "#167c77", width = .62) +
+  geom_errorbar(
+    aes(xmin = ci_low, xmax = ci_high),
+    orientation = "y",
+    height = .18,
+    linewidth = .5
+  ) +
+  geom_text(aes(label = sprintf("%s  %s", records, percent(percent, accuracy = .1))),
+            hjust = -.05, size = 3.5) +
+  facet_grid(symptom ~ ., scales = "free_y", space = "free_y") +
+  scale_x_continuous(
+    limits = c(0, 1.12), breaks = seq(0, 1, .25),
+    labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, 0))
+  ) +
+  labs(
+    x = "Percent reporting the symptom in the monthly form",
+    y = NULL,
+    caption = "Whiskers are participant-clustered 95% confidence intervals."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+        strip.text.y = element_text(angle = 0, face = "bold"),
+        plot.margin = margin(8, 48, 8, 8))
+```
+
+### Daily–monthly consistency by study site
+
+**What it shows.** The same daily–monthly comparison is repeated within each study site.
+
+**How it is calculated.** Monthly reports are linked to daily forms using participant ID and calendar month, then analysed separately by site. The bars show monthly symptom reporting conditional on whether any positive daily report was observed in that month.
+
+**Why it helps.** Site-specific disagreement can identify differences in completion, interpretation, translation, or implementation that would be hidden in the pooled agreement statistic.
+
+```{r}
+#| label: daily-monthly-consistency-site
+#| fig-height: 7
+#| fig-width: 13
+
+if (isTRUE(config$site_breakdowns$daily_monthly_consistency)) {
+  consistency_by_site <- bind_rows(lapply(unique(na.omit(as.character(linked_months$site))), function(site_name) {
+    site_months <- filter(linked_months, as.character(site) == site_name)
+    bind_rows(
+      summarise_consistency(site_months, "daily_any_bleeding", "menstrual_bleeding_last_month", "Bleeding"),
+      summarise_consistency(site_months, "daily_any_pain", "menstrual_pain_last_month", "Pain")
+    ) |>
+      mutate(site = site_name)
+  })) |>
+    mutate(site = factor(site, levels = unname(site_labels)))
+
+  print(
+    ggplot(consistency_by_site, aes(percent, daily_report)) +
+      geom_col(fill = "#167c77", width = .62) +
+      geom_errorbar(aes(xmin = ci_low, xmax = ci_high), orientation = "y", height = .16, linewidth = .45) +
+      geom_text(
+        aes(
+          label = percent(percent, accuracy = .1),
+          hjust = if_else(percent >= .95, 1.08, -.08)
+        ),
+        vjust = -.8,
+        size = 2.9
+      ) +
+      facet_grid(symptom ~ site, scales = "free_y", space = "free_y") +
+      scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1.12),
+                         breaks = seq(0, 1, .25), expand = expansion(mult = 0)) +
+      labs(x = "Percent reporting symptom in monthly form", y = NULL,
+           caption = "Whiskers are participant-clustered 95% confidence intervals within site.") +
+      theme_minimal(base_size = 11) +
+      theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(),
+            strip.text.y = element_text(angle = 0), plot.margin = margin(8, 42, 8, 8))
+  )
+}
+```
+
+```{r}
+#| label: agreement-table
+
+agreement <- tibble(
+  Symptom = c("Bleeding", "Pain"),
+  `Linked participant-months` = nrow(linked_months),
+  `Daily/monthly agreement` = c(
+    mean(linked_months$daily_any_bleeding == linked_months$menstrual_bleeding_last_month),
+    mean(linked_months$daily_any_pain == linked_months$menstrual_pain_last_month)
+  )
+) |>
+  mutate(`Daily/monthly agreement` = percent(`Daily/monthly agreement`, accuracy = .1))
+
+kable(agreement, align = c("l", "r", "r"))
+```

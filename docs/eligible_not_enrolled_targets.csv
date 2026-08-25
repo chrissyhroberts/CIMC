@@ -1,0 +1,36 @@
+participant_id,organization,site,recruitment_date,days_since_recruitment,planned_enrollment_date,phone,email,reminder,notes
+02-CIMC-0154,profamilia,Profamilia,2026-05-15,101,2026-05-26,,,,
+02-CIMC-0239,profamilia,Profamilia,2026-05-21,95,2026-05-30,,,,
+01-CIMC-0001,wmru,Wits MRU,2026-05-27,89,2026-06-09,,,,
+03-CIMC-0123,ohsu,OHSU,2026-05-30,86,2026-06-07,15035550123,test.participant.123@example.org,email_reminder,Dummy scheduling note
+03-CIMC-0172,ohsu,OHSU,2026-05-31,85,2026-06-12,15035550172,test.participant.172@example.org,phone_reminder,Dummy scheduling note
+01-CIMC-0141,wmru,Wits MRU,2026-06-16,69,2026-06-19,,,,
+02-CIMC-0088,profamilia,Profamilia,2026-06-17,68,2026-06-25,,,,
+03-CIMC-0117,ohsu,OHSU,2026-06-17,68,2026-06-26,15035550117,test.participant.117@example.org,phone_reminder,Dummy scheduling note
+03-CIMC-0226,ohsu,OHSU,2026-06-19,66,2026-06-21,15035550226,test.participant.226@example.org,email_reminder,Dummy scheduling note
+03-CIMC-0110,ohsu,OHSU,2026-06-20,65,2026-06-26,15035550110,test.participant.110@example.org,phone_reminder,Dummy scheduling note
+01-CIMC-0221,wmru,Wits MRU,2026-07-01,54,2026-07-10,,,,
+02-CIMC-0076,profamilia,Profamilia,2026-07-01,54,2026-07-12,,,,
+02-CIMC-0120,profamilia,Profamilia,2026-07-04,51,2026-07-15,,,,
+03-CIMC-0204,ohsu,OHSU,2026-07-05,50,2026-07-08,15035550204,test.participant.204@example.org,phone_reminder,Dummy scheduling note
+03-CIMC-0104,ohsu,OHSU,2026-07-07,48,2026-07-17,15035550104,test.participant.104@example.org,email_reminder,Dummy scheduling note
+01-CIMC-0180,wmru,Wits MRU,2026-07-13,42,2026-07-15,,,,
+03-CIMC-0195,ohsu,OHSU,2026-07-15,40,2026-07-23,15035550195,test.participant.195@example.org,email_reminder,Dummy scheduling note
+02-CIMC-0028,profamilia,Profamilia,2026-07-18,37,2026-07-24,,,,
+03-CIMC-0153,ohsu,OHSU,2026-07-23,32,2026-08-05,15035550153,test.participant.153@example.org,email_reminder,Dummy scheduling note
+03-CIMC-0026,ohsu,OHSU,2026-07-24,31,2026-08-07,15035550026,test.participant.026@example.org,phone_reminder,Dummy scheduling note
+01-CIMC-0084,wmru,Wits MRU,2026-07-25,30,2026-08-03,,,,
+01-CIMC-0220,wmru,Wits MRU,2026-07-26,29,2026-07-28,,,,
+03-CIMC-0018,ohsu,OHSU,2026-07-28,27,2026-07-31,15035550018,test.participant.018@example.org,email_reminder,Dummy scheduling note
+02-CIMC-0192,profamilia,Profamilia,2026-08-02,22,2026-08-15,,,,
+02-CIMC-0216,profamilia,Profamilia,2026-08-02,22,2026-08-04,,,,
+02-CIMC-0174,profamilia,Profamilia,2026-08-03,21,2026-08-15,,,,
+03-CIMC-0103,ohsu,OHSU,2026-08-05,19,2026-08-19,15035550103,test.participant.103@example.org,email_reminder,Dummy scheduling note
+03-CIMC-0085,ohsu,OHSU,2026-08-07,17,2026-08-19,15035550085,test.participant.085@example.org,email_reminder,Dummy scheduling note
+02-CIMC-0230,profamilia,Profamilia,2026-08-10,14,2026-08-17,,,,
+01-CIMC-0257,wmru,Wits MRU,2026-08-12,12,2026-08-16,,,,
+03-CIMC-0198,ohsu,OHSU,2026-08-12,12,2026-08-26,15035550198,test.participant.198@example.org,phone_reminder,Dummy scheduling note
+01-CIMC-0146,wmru,Wits MRU,2026-08-16,8,2026-08-30,,,,
+01-CIMC-0163,wmru,Wits MRU,2026-08-16,8,2026-08-20,,,,
+02-CIMC-0050,profamilia,Profamilia,2026-08-17,7,2026-08-26,,,,
+02-CIMC-0169,profamilia,Profamilia,2026-08-17,7,2026-08-31,,,,

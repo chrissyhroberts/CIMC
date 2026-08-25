@@ -1,0 +1,30 @@
+project:
+  type: book
+  output-dir: docs
+  pre-render: Rscript prepare_dashboard_data.R
+  post-render: Rscript copy_dashboard_downloads.R
+  resources:
+    - images
+book:
+  title: "CIMC study monitoring dashboard"
+  image: images/fhi360-logo.png
+
+  version: "2026-08-25"
+
+  chapters:
+  - index.qmd
+  - study_statistics.qmd
+  - menstrual_epro_daily_monthly_analysis.qmd
+  - monthly_epro_analysis.qmd
+  - data_quality.qmd
+  - technical_appendix.qmd
+
+
+format:
+  html:
+    theme: cosmo
+    css: monitoring.css
+    page-navigation: true
+
+
+editor: visual

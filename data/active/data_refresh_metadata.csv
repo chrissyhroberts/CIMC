@@ -1,0 +1,6 @@
+mode,prepared_at_utc,effective_data_cutoff,dataset,source,rows
+development,2026-08-25 11:20:21 UTC,2026-08-24,recruitment,local dummy file: dummy_recruitment_form_data.csv,260
+development,2026-08-25 11:20:21 UTC,2026-08-24,enrolment,local dummy file: dummy_enrolment_sociodemographics_data.csv,132
+development,2026-08-25 11:20:21 UTC,2026-08-24,cimc,local dummy file: dummy_CIMC_pro_data.csv,3853
+development,2026-08-25 11:20:21 UTC,2026-08-24,daily_data,local dummy file: dummy_daily_epro_data.csv,3853
+development,2026-08-25 11:20:21 UTC,2026-08-24,monthly_data,local dummy file: dummy_monthly_epro_data.csv,119

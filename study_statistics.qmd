@@ -1,0 +1,375 @@
+---
+title: "Study profile and demographics"
+subtitle: "Enrolled cohort characteristics"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: demographics-setup
+
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(yaml)
+library(htmltools)
+
+config <- read_yaml("dashboard_config.yml")
+enrolment <- read_csv(config$files$enrolment, show_col_types = FALSE)
+recruitment <- read_csv(config$files$recruitment, show_col_types = FALSE)
+site_labels <- unlist(config$labels$sites)
+age_group_breaks <- unlist(config$demographics$age_group_breaks)
+age_group_labels <- unlist(config$demographics$age_group_labels)
+exact_age_bin_width <- config$demographics$exact_age_bin_width
+exact_age_tick_interval <- config$demographics$exact_age_tick_interval
+initiation_recency_breaks <- unlist(config$demographics$initiation_recency_breaks)
+initiation_recency_labels <- unlist(config$demographics$initiation_recency_labels)
+
+education_labels <- c(
+  primary = "Primary", secondary = "Secondary",
+  tertiary_university = "Tertiary / university",
+  post_matric_qualification = "Post-matric qualification",
+  tertiary = "Tertiary", university = "University",
+  less_than_high_school_ged = "Less than high school / GED",
+  high_school_graduate_ged = "High school graduate / GED",
+  some_college_associates_degree = "Some college / associate degree",
+  bachelors_degree = "Bachelor's degree", advanced_degree = "Advanced degree",
+  no_response = "No response"
+)
+
+method_labels <- c(
+  injectable_dmpa = "Injectable DMPA", injectable_net_en = "Injectable NET-EN",
+  injectables = "Injectable", pills = "Pills", implants = "Implant",
+  hormonal_iud = "Hormonal IUD", nonhormonal_iud = "Non-hormonal IUD",
+  hormonal_rings = "Hormonal ring", hormonal_patches = "Hormonal patch",
+  emergency_contraception = "Emergency contraception", other = "Other"
+)
+
+enrolment <- enrolment |>
+  mutate(
+    enrollment_date = as.Date(enrollment_date),
+    contraception_start_date = as.Date(contraception_start_date),
+    site = factor(unname(site_labels[organization]), levels = unname(site_labels)),
+    age_group = cut(
+      age,
+      breaks = age_group_breaks,
+      include.lowest = TRUE,
+      right = TRUE,
+      labels = age_group_labels
+    ),
+    education = unname(education_labels[education_level]),
+    method = unname(method_labels[contraceptive_method]),
+    start_recency_group = cut(
+      days_since_contraception_start,
+      breaks = initiation_recency_breaks,
+      labels = initiation_recency_labels
+    ),
+    partner_group = case_when(
+      partner_status_a %in% c("regular_partner_living_together", "spouse_living_together") ~ "Partnered — living together",
+      partner_status_a %in% c("regular_partner_not_living_together", "spouse_not_living_together", "casual_partners") ~ "Partnered — not living together",
+      partner_status_a == "no_partner" ~ "Unpartnered",
+      partner_status_b %in% c("currently_married", "living_with_man") ~ "Partnered — living together",
+      partner_status_b == "never_in_union" ~ "Unpartnered",
+      partner_status_b == "divorced_separated_widowed" ~ "Previously partnered",
+      partner_status_c == "partnered_living_together" ~ "Partnered — living together",
+      partner_status_c == "partnered_not_living_together" ~ "Partnered — not living together",
+      partner_status_c %in% c("unpartnered_not_sexually_active", "unpartnered_sexually_active") ~ "Unpartnered",
+      str_detect(coalesce(partner_status_a, partner_status_b, partner_status_c, ""), "no_response") ~ "No response",
+      TRUE ~ "Other / not classified"
+    )
+  )
+
+n_enrolled <- nrow(enrolment)
+median_age <- median(enrolment$age, na.rm = TRUE)
+age_range <- range(enrolment$age, na.rm = TRUE)
+n_methods <- n_distinct(enrolment$method, na.rm = TRUE)
+n_sites <- n_distinct(enrolment$organization)
+```
+
+This page describes the people who completed the enrolment and sociodemographic form. Percentages use enrolled participants as their denominator unless a site-specific denominator is shown. These are descriptive distributions, not evidence that recruitment is representative of a wider population.
+
+**What.** This page describes who has enrolled, including age, education, contraceptive method, relationship status and reminder preferences.
+
+**How.** Each enrolled participant contributes one record. Site panels retain site-specific wording where the forms are not directly equivalent, while a small number of clearly defined variables are harmonised for comparison.
+
+**Why.** The distributions help the team understand the cohort being followed, identify site imbalances, and judge how cautiously pooled study-level summaries should be interpreted.
+
+```{r}
+#| label: demographic-kpis
+#| results: asis
+
+kpi <- function(label, value, note) {
+  tags$div(
+    class = "monitor-kpi",
+    tags$div(class = "monitor-kpi-label", label),
+    tags$div(class = "monitor-kpi-value", value),
+    tags$div(class = "monitor-kpi-note", note)
+  )
+}
+
+demographic_cards <- tags$div(
+  class = "monitor-kpis",
+  kpi("Enrolled cohort", comma(n_enrolled), paste(n_sites, "sites")),
+  kpi("Median age", paste0(median_age, " years"), paste(age_range[[1]], "to", age_range[[2]])),
+  kpi("Contraceptive methods", n_methods, "Grouped method categories"),
+  kpi("Median initiation recency", paste0(median(enrolment$days_since_contraception_start), " days"), "At enrolment")
+)
+
+cat("```{=html}\n", as.character(demographic_cards), "\n```\n", sep = "")
+```
+
+## Age distribution
+
+**What it shows.** The first chart preserves exact age; the second groups ages to compare site composition.
+
+**How it is calculated.** Age-group boundaries and labels come from `dashboard_config.yml`, and every enrolled participant remains in the denominator.
+
+**Why it helps.** It shows both the detailed age distribution and whether sites are enrolling meaningfully different age profiles.
+
+```{r}
+#| label: exact-age-distribution
+#| fig-height: 5
+#| fig-width: 10
+
+ggplot(enrolment, aes(age, fill = site)) +
+  geom_histogram(binwidth = exact_age_bin_width, boundary = min(age_group_breaks), colour = "white") +
+  facet_wrap(vars(site), ncol = 1) +
+  scale_x_continuous(breaks = seq(min(age_group_breaks), max(age_group_breaks), by = exact_age_tick_interval)) +
+  labs(x = "Age at enrolment (years)", y = "Participants", fill = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none", panel.grid.minor = element_blank())
+```
+
+```{r}
+#| label: age-group-composition
+#| fig-height: 4.8
+#| fig-width: 10
+
+age_group_results <- enrolment |>
+  count(site, age_group) |>
+  complete(site, age_group, fill = list(n = 0L)) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n)) |>
+  ungroup()
+
+ggplot(age_group_results, aes(percent, site, fill = age_group)) +
+  geom_col(width = .62) +
+  geom_text(
+    aes(label = if_else(percent >= .07, paste0(n, "\n", percent(percent, accuracy = 1)), "")),
+    position = position_stack(vjust = .5), size = 3, lineheight = .9
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = 0)) +
+  labs(x = "Percent of enrolled participants", y = NULL, fill = "Age group") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Education
+
+**What it shows.** Education responses within each site.
+
+**How it is calculated.** Categories are retained exactly because the three site versions differ, and percentages use enrolled participants at that site.
+
+**Why it helps.** It describes the cohort without forcing unlike qualifications into a potentially misleading common hierarchy.
+
+```{r}
+#| label: education-distribution
+#| fig-height: 8
+#| fig-width: 10
+
+education_results <- enrolment |>
+  count(site, education) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n), education = reorder(education, percent)) |>
+  ungroup()
+
+ggplot(education_results, aes(percent, education)) +
+  geom_col(fill = "#167c77", width = .65) +
+  geom_text(
+    aes(label = sprintf("%s  %s", n, percent(percent, accuracy = .1))),
+    hjust = -.06, size = 3.2
+  ) +
+  facet_grid(site ~ ., scales = "free_y", space = "free_y") +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .23))) +
+  labs(x = "Percent within site", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(), strip.text.y = element_text(angle = 0))
+```
+
+## Contraceptive method at enrolment
+
+**What it shows.** The contraceptive methods represented within each study site.
+
+**How it is calculated.** Each participant is counted once using the method recorded at enrolment.
+
+**Why it helps.** Method mix may influence bleeding and pain patterns, so large site differences matter when interpreting pooled outcomes.
+
+```{r}
+#| label: method-distribution
+#| fig-height: 7
+#| fig-width: 10
+
+method_results <- enrolment |>
+  count(site, method) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n), method = reorder(method, percent)) |>
+  ungroup()
+
+ggplot(method_results, aes(percent, method)) +
+  geom_col(fill = "#167c77", width = .65) +
+  geom_text(
+    aes(label = sprintf("%s  %s", n, percent(percent, accuracy = .1))),
+    hjust = -.06, size = 3.2
+  ) +
+  facet_grid(site ~ ., scales = "free_y", space = "free_y") +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .25))) +
+  labs(x = "Percent within site", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(), strip.text.y = element_text(angle = 0))
+```
+
+## Time since contraceptive initiation at enrolment
+
+**What it shows.** How recently the contraceptive was initiated when each participant enrolled.
+
+**How it is calculated.** The recorded start date is subtracted from enrolment date and grouped using configured time bands.
+
+**Why it helps.** Follow-up experiences may differ by time since initiation, and the chart also exposes records outside the configured `r config$study$contraceptive_start_eligibility_days`-day eligibility window.
+
+```{r}
+#| label: initiation-recency
+#| fig-height: 4.5
+#| fig-width: 10
+
+start_recency <- enrolment |>
+  count(site, start_recency_group) |>
+  complete(site, start_recency_group, fill = list(n = 0L)) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n)) |>
+  ungroup()
+
+ggplot(start_recency, aes(percent, site, fill = start_recency_group)) +
+  geom_col(width = .62) +
+  geom_text(
+    aes(label = if_else(percent >= .07, paste0(n, "\n", percent(percent, accuracy = 1)), "")),
+    position = position_stack(vjust = .5), size = 3, lineheight = .9
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = 0)) +
+  labs(x = "Percent within site", y = NULL, fill = "Days since initiation") +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Partner status
+
+The forms use different site-specific wording. For monitoring only, responses are harmonised into broad living-arrangement categories; the original response fields remain available in the source CSV.
+
+```{r}
+#| label: partner-status
+#| fig-height: 4.8
+#| fig-width: 10
+
+partner_results <- enrolment |>
+  count(site, partner_group) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n)) |>
+  ungroup()
+
+ggplot(partner_results, aes(percent, site, fill = partner_group)) +
+  geom_col(width = .62) +
+  geom_text(
+    aes(label = if_else(percent >= .07, paste0(n, "\n", percent(percent, accuracy = 1)), "")),
+    position = position_stack(vjust = .5), size = 3, lineheight = .9
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = 0)) +
+  labs(x = "Percent within site", y = NULL, fill = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Reminder preferences
+
+Because daily reminders permit multiple selections, combinations are shown as reported rather than split into percentages that would exceed 100%.
+
+```{r}
+#| label: reminder-preferences
+#| fig-height: 6.5
+#| fig-width: 10
+
+reminder_results <- enrolment |>
+  mutate(reminder = str_replace_all(daily_reminder_method, "_", " ")) |>
+  count(site, reminder) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n), reminder = reorder(reminder, percent)) |>
+  ungroup()
+
+ggplot(reminder_results, aes(percent, reminder)) +
+  geom_col(fill = "#8c4f7d", width = .65) +
+  geom_text(
+    aes(label = sprintf("%s  %s", n, percent(percent, accuracy = .1))),
+    hjust = -.06, size = 3.2
+  ) +
+  facet_grid(site ~ ., scales = "free_y", space = "free_y") +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .25))) +
+  labs(x = "Percent within site", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(), strip.text.y = element_text(angle = 0))
+```
+
+## Recruitment exclusions
+
+This final distribution is based on screened people who were not eligible. Reasons are mutually exclusive in the dummy data so totals can be interpreted directly; a production export may require a prespecified hierarchy when several criteria fail.
+
+```{r}
+#| label: recruitment-exclusions
+#| fig-height: 5.5
+#| fig-width: 10
+
+exclusions <- recruitment |>
+  filter(eligibility_status == "not_eligible") |>
+  mutate(
+    reason = case_when(
+      prior_participation == "yes" ~ "Prior study participation",
+      screening_consent == "no" ~ "Declined screening",
+      age_18_49 == "no" ~ "Age criterion",
+      currently_pregnant == "yes" |
+        pregnant_last_6_weeks == "yes" |
+        (currently_breastfeeding == "yes" & periods_returned == "no") ~
+        "Pregnancy / recent pregnancy",
+      current_contraception == "no" ~ "Not currently using contraception",
+      started_last_74_days == "no" ~ "Method started outside window",
+      method_eligible == "no" ~ "Method not eligible",
+      same_method_before_insertion == "yes" ~ "Same method before insertion",
+      non_contraceptive_hormones == "yes" ~ "Other hormone use",
+      personal_smartphone == "no" | personal_smartphone_90_days == "no" ~
+        "Smartphone access",
+      language_ability == "no" ~ "Language criterion",
+      TRUE ~ "Other or incomplete screening"
+    )
+  ) |>
+  count(reason) |>
+  mutate(percent = n / sum(n))
+
+ggplot(exclusions, aes(percent, reorder(reason, percent))) +
+  geom_col(fill = "#167c77", width = .66) +
+  geom_text(
+    aes(label = sprintf("%s  %s", n, percent(percent, accuracy = .1))),
+    hjust = -.06, size = 3.3
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .22))) +
+  labs(x = "Percent of screened-out people", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+## Interpretation notes
+
+- Demographic charts use one row per enrolled participant.
+- Site-specific education and partner questions are not assumed to be perfectly equivalent.
+- “No response” is retained rather than silently excluded from denominators.
+- The dummy data are designed to exercise the dashboard and do not represent expected study prevalence.

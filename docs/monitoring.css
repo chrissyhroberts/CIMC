@@ -1,0 +1,71 @@
+.monitor-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  gap: .8rem;
+  margin: .5rem 0 1.4rem;
+}
+
+.monitor-kpi {
+  padding: .85rem 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: .65rem;
+  background: var(--bs-tertiary-bg);
+}
+
+.monitor-kpi-label {
+  color: var(--bs-secondary-color);
+  font-size: .82rem;
+  margin-bottom: .15rem;
+}
+
+.monitor-kpi-value {
+  font-size: 1.55rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.monitor-kpi-note {
+  color: var(--bs-secondary-color);
+  font-size: .78rem;
+  margin-top: .2rem;
+}
+
+.monitor-downloads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: .7rem;
+  margin: .8rem 0 1.2rem;
+}
+
+.monitor-download {
+  padding: .75rem .9rem;
+  border-left: 4px solid #167c77;
+  background: var(--bs-tertiary-bg);
+}
+
+.monitor-download strong {
+  display: block;
+  margin-bottom: .2rem;
+}
+
+.monitor-table-scroll {
+  max-height: 24rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--bs-border-color);
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.monitor-table-scroll table {
+  margin-bottom: 0;
+}
+
+.monitor-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bs-body-bg);
+}
+
+@media (max-width: 650px) {
+  .monitor-kpi-value { font-size: 1.3rem; }
+}

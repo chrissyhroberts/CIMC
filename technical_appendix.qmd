@@ -1,0 +1,119 @@
+---
+title: "Technical appendix"
+subtitle: "Detailed ever-reported pain map"
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    code-summary: "Show R code"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+{{< include _epro_shared.qmd >}}
+
+## Technical appendix: detailed ever-reported pain location map
+
+This version retains every original SVG region, including left/right and dorsal/ventral distinctions. Locations come only from pain-positive daily submissions; percentages use all unique participants as the denominator, and each participant contributes at most once per detailed region across the observation period.
+
+**What it answers.** “Did this participant ever report pain in this exact anatomical region during follow-up?” Repeated reports in the same region do not increase that participant's contribution.
+
+**Why it is in the appendix.** The detailed map preserves laterality and body surface for clinical or instrument-development review, while the symmetric map earlier in the report provides the clearer primary summary.
+
+```{r}
+#| label: detailed-body-map
+#| results: asis
+
+detailed_map_html <- tags$div(
+  id = "bodymap-report-detailed",
+  class = "bodymap-report",
+  tags$div(
+    class = "bodymap-frame",
+    HTML(detailed_bodymap$markup),
+    tags$div(
+      class = "tooltip bodymap-hover",
+      role = "status",
+      `aria-live` = "polite",
+      tags$div(class = "tooltip-inner")
+    )
+  ),
+  tags$div(
+    class = "bodymap-legend",
+    `aria-label` = "Colour scale: percent of all participants",
+    tags$div(class = "bodymap-gradient"),
+    tags$div(
+      class = "bodymap-legend-labels",
+      tags$span("0%"),
+      tags$span("Percent of all participants"),
+      tags$span(sprintf("%.1f%%", detailed_bodymap$maximum))
+    )
+  ),
+  tags$div(
+    class = "bodymap-note",
+    "Hover over or focus a detailed body region to see its participant count and percentage."
+  )
+)
+
+cat("```{=html}\n", as.character(detailed_map_html), "\n```\n", sep = "")
+
+if (length(detailed_bodymap$unknown) > 0) {
+  warning_html <- tags$div(
+    class = "bodymap-warning",
+    tags$strong("Unmatched detailed response codes: "),
+    paste(detailed_bodymap$unknown, collapse = ", ")
+  )
+  cat("```{=html}\n", as.character(warning_html), "\n```\n", sep = "")
+}
+```
+
+```{=html}
+<script>
+(function () {
+  function initialiseDetailedMap() {
+    const root = document.getElementById('bodymap-report-detailed');
+    if (!root || root.dataset.bodymapInitialised === 'true') return;
+    root.dataset.bodymapInitialised = 'true';
+    const frame = root.querySelector('.bodymap-frame');
+    const tooltip = root.querySelector('.bodymap-hover');
+    const inner = tooltip.querySelector('.tooltip-inner');
+
+    function regionFrom(target) {
+      return target && target.closest ? target.closest('[data-bodymap-tooltip]') : null;
+    }
+    function show(region) {
+      if (!region || !frame.contains(region)) return;
+      inner.textContent = region.getAttribute('data-bodymap-tooltip');
+      tooltip.classList.add('is-visible');
+      const regionBox = region.getBoundingClientRect();
+      const frameBox = frame.getBoundingClientRect();
+      const tooltipBox = tooltip.getBoundingClientRect();
+      let left = regionBox.left - frameBox.left + regionBox.width / 2 - tooltipBox.width / 2;
+      left = Math.max(8, Math.min(left, frameBox.width - tooltipBox.width - 8));
+      let top = regionBox.top - frameBox.top - tooltipBox.height - 8;
+      if (top < 8) top = regionBox.bottom - frameBox.top + 8;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    }
+    function hide() { tooltip.classList.remove('is-visible'); }
+
+    root.addEventListener('pointerover', function (event) { show(regionFrom(event.target)); });
+    root.addEventListener('pointerout', function (event) {
+      const current = regionFrom(event.target);
+      const next = regionFrom(event.relatedTarget);
+      if (current && next !== current) hide();
+    });
+    root.addEventListener('focusin', function (event) { show(regionFrom(event.target)); });
+    root.addEventListener('focusout', hide);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialiseDetailedMap, { once: true });
+  } else {
+    initialiseDetailedMap();
+  }
+})();
+</script>
+```
