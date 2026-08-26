@@ -168,9 +168,9 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#recruitment-monitoring" id="toc-recruitment-monitoring" class="nav-link active" data-scroll-target="#recruitment-monitoring"><span class="header-section-number">0.1</span> Recruitment monitoring</a>
   <ul class="collapse">
-  <li><a href="#cumulative-enrolment" id="toc-cumulative-enrolment" class="nav-link" data-scroll-target="#cumulative-enrolment"><span class="header-section-number">0.1.1</span> Cumulative enrolment</a></li>
+  <li><a href="#cumulative-enrollment" id="toc-cumulative-enrollment" class="nav-link" data-scroll-target="#cumulative-enrollment"><span class="header-section-number">0.1.1</span> Cumulative enrollment</a></li>
   <li><a href="#recruitment-funnel" id="toc-recruitment-funnel" class="nav-link" data-scroll-target="#recruitment-funnel"><span class="header-section-number">0.1.2</span> Recruitment funnel</a></li>
-  <li><a href="#enrolment-against-site-targets" id="toc-enrolment-against-site-targets" class="nav-link" data-scroll-target="#enrolment-against-site-targets"><span class="header-section-number">0.1.3</span> Enrolment against site targets</a></li>
+  <li><a href="#enrollment-against-site-targets" id="toc-enrollment-against-site-targets" class="nav-link" data-scroll-target="#enrollment-against-site-targets"><span class="header-section-number">0.1.3</span> Enrollment against site targets</a></li>
   <li><a href="#recruitment-progress-by-site" id="toc-recruitment-progress-by-site" class="nav-link" data-scroll-target="#recruitment-progress-by-site"><span class="header-section-number">0.1.4</span> Recruitment progress by site</a></li>
   </ul></li>
   <li><a href="#daily-survey-completion-monitoring" id="toc-daily-survey-completion-monitoring" class="nav-link" data-scroll-target="#daily-survey-completion-monitoring"><span class="header-section-number">0.2</span> Daily survey completion monitoring</a>
@@ -211,9 +211,9 @@ ul.task-list li input[type="checkbox"] {
 
 
 <p>Data are current through 24 August 2026. This front page is operational: it shows recruitment flow, survey completion, and participants requiring action.</p>
-<p><strong>Current source.</strong> Linked dummy development data; staged at 2026-08-26 11:09:42 UTC. Change <code>data_source.mode</code> in <code>dashboard_config.yml</code> to switch between development and production ingestion.</p>
-<p><strong>What.</strong> This page gives the study team a current operational picture of recruitment, enrolment, follow-up and missing reports. It covers the client-specified recruitment trajectory, screening funnel, site delivery, daily completion trend, follow-up queue, recent participant tracking, and site completion.</p>
-<p><strong>How.</strong> Records are linked by participant ID. Expected reports run from enrolment to the earliest of the configured follow-up end, data cutoff, or recorded method stop. The action lists apply the thresholds documented in <code>dashboard_config.yml</code>.</p>
+<p><strong>Current source.</strong> Linked dummy development data; staged at 2026-08-26 15:32:13 UTC. Change <code>data_source.mode</code> in <code>dashboard_config.yml</code> to switch between development and production ingestion.</p>
+<p><strong>What.</strong> This page gives the study team a current operational picture of recruitment, enrollment, follow-up and missing reports. It covers the client-specified recruitment trajectory, screening funnel, site delivery, daily completion trend, follow-up queue, recent participant tracking, and site completion.</p>
+<p><strong>How.</strong> Records are linked by participant ID. Expected reports run from enrollment to the earliest of the configured follow-up end, data cutoff, or recorded method stop. The action lists apply the thresholds documented in <code>dashboard_config.yml</code>.</p>
 <p><strong>Why.</strong> It supports day-to-day decisions: whether recruitment is on target, whether follow-up is being sustained, and which participants may need timely contact. It is a monitoring page, not a clinical outcomes analysis.</p>
 <section id="recruitment-monitoring" class="level2" data-number="0.1">
 <h2 data-number="0.1" class="anchored" data-anchor-id="recruitment-monitoring"><span class="header-section-number">0.1</span> Recruitment monitoring</h2>
@@ -222,7 +222,7 @@ Overall and by site · through 24 August 2026
 </div>
 <div class="monitor-kpis">
   <div class="monitor-kpi">
-    <div class="monitor-kpi-label">Enrolment target</div>
+    <div class="monitor-kpi-label">Enrollment target</div>
     <div class="monitor-kpi-value">150</div>
     <div class="monitor-kpi-note">Across all configured sites</div>
   </div>
@@ -247,10 +247,10 @@ Overall and by site · through 24 August 2026
     <div class="monitor-kpi-note">Planned 30 Sep 2026</div>
   </div>
 </div>
-<section id="cumulative-enrolment" class="level3" data-number="0.1.1">
-<h3 data-number="0.1.1" class="anchored" data-anchor-id="cumulative-enrolment"><span class="header-section-number">0.1.1</span> Cumulative enrolment</h3>
-<p><strong>What it shows.</strong> Actual cumulative enrolment against the straight-line plan implied by the configured recruitment start date, target date, and site targets.</p>
-<p><strong>How it is calculated.</strong> Enrolments are counted once on their enrolment date. The planned line rises evenly from zero to the total configured target; it is a monitoring reference rather than a statistical model.</p>
+<section id="cumulative-enrollment" class="level3" data-number="0.1.1">
+<h3 data-number="0.1.1" class="anchored" data-anchor-id="cumulative-enrollment"><span class="header-section-number">0.1.1</span> Cumulative enrollment</h3>
+<p><strong>What it shows.</strong> Actual cumulative enrollment against the straight-line plan implied by the configured recruitment start date, target date, and site targets.</p>
+<p><strong>How it is calculated.</strong> Enrollments are counted once on their enrollment date. The planned line rises evenly from zero to the total configured target; it is a monitoring reference rather than a statistical model.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -276,11 +276,11 @@ Overall and by site · through 24 August 2026
 </div>
 </div>
 </section>
-<section id="enrolment-against-site-targets" class="level3" data-number="0.1.3">
-<h3 data-number="0.1.3" class="anchored" data-anchor-id="enrolment-against-site-targets"><span class="header-section-number">0.1.3</span> Enrolment against site targets</h3>
-<p><strong>What it shows.</strong> Enrolment achieved at each site relative to its configured target.</p>
-<p><strong>How it is calculated.</strong> Enrolled participants are counted once at their enrolment site and divided by that site’s target in <code>dashboard_config.yml</code>.</p>
-<p><strong>Why it helps.</strong> It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrolment.</p>
+<section id="enrollment-against-site-targets" class="level3" data-number="0.1.3">
+<h3 data-number="0.1.3" class="anchored" data-anchor-id="enrollment-against-site-targets"><span class="header-section-number">0.1.3</span> Enrollment against site targets</h3>
+<p><strong>What it shows.</strong> Enrollment achieved at each site relative to its configured target.</p>
+<p><strong>How it is calculated.</strong> Enrolled participants are counted once at their enrollment site and divided by that site’s target in <code>dashboard_config.yml</code>.</p>
+<p><strong>Why it helps.</strong> It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrollment.</p>
 <div class="cell">
 <div class="cell-output-display">
 <div>
@@ -1180,8 +1180,8 @@ whatsapp
 
 <section id="potential-protocol-deviations-and-violations" class="level2" data-number="0.3">
 <h2 data-number="0.3" class="anchored" data-anchor-id="potential-protocol-deviations-and-violations"><span class="header-section-number">0.3</span> Potential protocol deviations and violations</h2>
-<p><strong>What it shows.</strong> This section screens linked study forms for records that may represent a protocol deviation or violation. The supplied rules include CIMC reports without enrolment, missing programme start dates, reports dated before enrolment, duplicate participant-days, duplicate enrolments, and enrolments without recruitment records.</p>
-<p><strong>How it is calculated.</strong> Exact participant IDs and recorded dates are compared across recruitment, enrolment, and CIMC submissions. Each rule and its provisional classification are controlled in <code>dashboard_config.yml</code>. CIMC submissions without a valid linked programme start remain in this monitoring register but are excluded from symptom and cycle analyses.</p>
+<p><strong>What it shows.</strong> This section screens linked study forms for records that may represent a protocol deviation or violation. The supplied rules include CIMC reports without enrollment, missing programme start dates, reports dated before enrollment, duplicate participant-days, duplicate enrollments, and enrollments without recruitment records.</p>
+<p><strong>How it is calculated.</strong> Exact participant IDs and recorded dates are compared across recruitment, enrollment, and CIMC submissions. Each rule and its provisional classification are controlled in <code>dashboard_config.yml</code>. CIMC submissions without a valid linked programme start remain in this monitoring register but are excluded from symptom and cycle analyses.</p>
 <p><strong>Why it helps.</strong> A linkage problem should create an actionable signal rather than prevent the dashboard from rendering. These are <strong>potential</strong> events: the dashboard does not determine seriousness, causality, or reportability. The study team must verify source records and adjudicate each flag under the approved protocol and deviation-management procedures.</p>
 <div class="monitor-kpis">
   <div class="monitor-kpi">
@@ -1548,7 +1548,7 @@ Body map: unmatched detailed response codes
   </div>
   <div class="monitor-download">
     <strong>Eligible but not enrolled — 35</strong>
-    <div class="small text-muted">Eligible for at least 7 days without an enrolment record</div>
+    <div class="small text-muted">Eligible for at least 7 days without an enrollment record</div>
     <div class="monitor-download-links">
       <a href="eligible_not_enrolled_targets.csv" download="eligible_not_enrolled_targets.csv">Combined</a>
       <a href="eligible_not_enrolled_targets_wmru.csv" download="eligible_not_enrolled_targets_wmru.csv">Wits MRU</a>
@@ -2249,7 +2249,7 @@ NA
 <section id="monitoring-definitions" class="level2" data-number="0.7">
 <h2 data-number="0.7" class="anchored" data-anchor-id="monitoring-definitions"><span class="header-section-number">0.7</span> Monitoring definitions</h2>
 <ul>
-<li><strong>Expected daily reports</strong> run from enrolment through the earliest of the configured follow-up day (90), the data cutoff, or a recorded method stop date.</li>
+<li><strong>Expected daily reports</strong> run from enrollment through the earliest of the configured follow-up day (90), the data cutoff, or a recorded method stop date.</li>
 <li><strong>Monthly reports expected</strong> are calendar-month sections due on configured day 1 of a month within that observed interval. The supplied setting matches the revised CIMC form.</li>
 <li><strong>Current consecutive missed days</strong> count backwards from the participant’s latest due day. A submitted form breaks the streak.</li>
 <li><strong>Reached day 90</strong> describes elapsed follow-up time, not questionnaire adherence.</li>

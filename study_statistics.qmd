@@ -120,7 +120,7 @@ n_methods <- n_distinct(enrolment$method, na.rm = TRUE)
 n_sites <- n_distinct(enrolment$organization)
 ```
 
-This page describes the people who completed the enrolment and sociodemographic form. Percentages use enrolled participants as their denominator unless a site-specific denominator is shown. These are descriptive distributions, not evidence that recruitment is representative of a wider population.
+This page describes the people who completed the enrollment and sociodemographic form. Percentages use enrolled participants as their denominator unless a site-specific denominator is shown. These are descriptive distributions, not evidence that recruitment is representative of a wider population.
 
 **What.** This page describes who has enrolled, including age, education, contraceptive method, relationship status and reminder preferences.
 
@@ -146,7 +146,7 @@ demographic_cards <- tags$div(
   kpi("Enrolled cohort", comma(n_enrolled), paste(n_sites, "sites")),
   kpi("Median age", paste0(median_age, " years"), paste(age_range[[1]], "to", age_range[[2]])),
   kpi("Contraceptive methods", n_methods, "Grouped method categories"),
-  kpi("Median initiation recency", paste0(median(enrolment$days_since_contraception_start), " days"), "At enrolment")
+  kpi("Median initiation recency", paste0(median(enrolment$days_since_contraception_start), " days"), "At enrollment")
 )
 
 cat("```{=html}\n", as.character(demographic_cards), "\n```\n", sep = "")
@@ -169,7 +169,7 @@ ggplot(enrolment, aes(age, fill = site)) +
   geom_histogram(binwidth = exact_age_bin_width, boundary = min(age_group_breaks), colour = "white") +
   facet_wrap(vars(site), ncol = 1) +
   scale_x_continuous(breaks = seq(min(age_group_breaks), max(age_group_breaks), by = exact_age_tick_interval)) +
-  labs(x = "Age at enrolment (years)", y = "Participants", fill = NULL) +
+  labs(x = "Age at enrollment (years)", y = "Participants", fill = NULL) +
   theme_minimal(base_size = 12) +
   theme(legend.position = "none", panel.grid.minor = element_blank())
 ```
@@ -230,11 +230,11 @@ ggplot(education_results, aes(percent, education)) +
   theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(), strip.text.y = element_text(angle = 0))
 ```
 
-## Contraceptive method at enrolment
+## Contraceptive method at enrollment
 
 **What it shows.** The contraceptive methods represented within each study site.
 
-**How it is calculated.** Each participant is counted once using the method recorded at enrolment.
+**How it is calculated.** Each participant is counted once using the method recorded at enrollment.
 
 **Why it helps.** Method mix may influence bleeding and pain patterns, so large site differences matter when interpreting pooled outcomes.
 
@@ -262,11 +262,11 @@ ggplot(method_results, aes(percent, method)) +
   theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank(), strip.text.y = element_text(angle = 0))
 ```
 
-## Time since contraceptive initiation at enrolment
+## Time since contraceptive initiation at enrollment
 
 **What it shows.** How recently the contraceptive was initiated when each participant enrolled.
 
-**How it is calculated.** The recorded start date is subtracted from enrolment date and grouped using configured time bands.
+**How it is calculated.** The recorded start date is subtracted from enrollment date and grouped using configured time bands.
 
 **Why it helps.** Follow-up experiences may differ by time since initiation, and the chart also exposes records outside the configured `r config$study$contraceptive_start_eligibility_days`-day eligibility window.
 

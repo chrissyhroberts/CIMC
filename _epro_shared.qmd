@@ -117,7 +117,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bs-body-bg);
+  background: #edf2f3;
 }
 </style>
 ```

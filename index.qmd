@@ -155,18 +155,18 @@ protocol_review <- bind_rows(
       distinct(uniqueid, date, .keep_all = TRUE) |>
       transmute(uniqueid, record_date = date, site, records = 1L),
     "cimc_without_enrolment",
-    "CIMC submission has no matching enrolment record",
+    "CIMC submission has no matching enrollment record",
     "CIMC",
-    "The participant ID was present in CIMC but absent from enrolment.",
-    "Verify the ID and enrolment history; document and adjudicate the event."
+    "The participant ID was present in CIMC but absent from enrollment.",
+    "Verify the ID and enrollment history; document and adjudicate the event."
   ),
   make_protocol_flags(
     enrolment |>
       filter(is.na(contraception_start_date)) |>
       transmute(uniqueid, record_date = enrollment_date, site, records = 1L),
     "missing_programme_start_date",
-    "Enrolment has no valid programme start date",
-    "Enrolment",
+    "Enrollment has no valid programme start date",
+    "Enrollment",
     "A programme start date is required to define follow-up and cycle timing.",
     "Verify the source record and correct it through the approved data process."
   ),
@@ -176,9 +176,9 @@ protocol_review <- bind_rows(
       distinct(uniqueid, date, .keep_all = TRUE) |>
       transmute(uniqueid, record_date = date, site, records = 1L),
     "cimc_before_enrolment",
-    "CIMC report is dated before enrolment",
+    "CIMC report is dated before enrollment",
     "CIMC",
-    "The report date precedes the linked participant's enrolment date.",
+    "The report date precedes the linked participant's enrollment date.",
     "Check form dates, time zone, participant ID, and whether follow-up began early."
   ),
   make_protocol_flags(
@@ -203,9 +203,9 @@ protocol_review <- bind_rows(
       ) |>
       transmute(uniqueid, record_date, site, records),
     "duplicate_enrolment_participant",
-    "More than one enrolment submission for a participant",
-    "Enrolment",
-    "Multiple enrolment records share the same participant ID.",
+    "More than one enrollment submission for a participant",
+    "Enrollment",
+    "Multiple enrollment records share the same participant ID.",
     "Verify whether the later record is an authorised correction and adjudicate the duplicate."
   ),
   make_protocol_flags(
@@ -213,9 +213,9 @@ protocol_review <- bind_rows(
       anti_join(recruitment |> distinct(uniqueid), by = "uniqueid") |>
       transmute(uniqueid, record_date = enrollment_date, site, records = 1L),
     "enrolment_without_recruitment",
-    "Enrolment has no matching recruitment record",
-    "Enrolment",
-    "The participant ID was present in enrolment but absent from recruitment.",
+    "Enrollment has no matching recruitment record",
+    "Enrollment",
+    "The participant ID was present in enrollment but absent from recruitment.",
     "Verify recruitment history and participant ID; adjudicate against the protocol."
   )
 ) |>
@@ -510,9 +510,9 @@ Data are current through `r format(data_cutoff, "%d %B %Y")`. This front page is
 
 **Current source.** `r data_source_label`; staged at `r data_prepared_at`. Change `data_source.mode` in `dashboard_config.yml` to switch between development and production ingestion.
 
-**What.** This page gives the study team a current operational picture of recruitment, enrolment, follow-up and missing reports. It covers the client-specified recruitment trajectory, screening funnel, site delivery, daily completion trend, follow-up queue, recent participant tracking, and site completion.
+**What.** This page gives the study team a current operational picture of recruitment, enrollment, follow-up and missing reports. It covers the client-specified recruitment trajectory, screening funnel, site delivery, daily completion trend, follow-up queue, recent participant tracking, and site completion.
 
-**How.** Records are linked by participant ID. Expected reports run from enrolment to the earliest of the configured follow-up end, data cutoff, or recorded method stop. The action lists apply the thresholds documented in `dashboard_config.yml`.
+**How.** Records are linked by participant ID. Expected reports run from enrollment to the earliest of the configured follow-up end, data cutoff, or recorded method stop. The action lists apply the thresholds documented in `dashboard_config.yml`.
 
 **Why.** It supports day-to-day decisions: whether recruitment is on target, whether follow-up is being sustained, and which participants may need timely contact. It is a monitoring page, not a clinical outcomes analysis.
 
@@ -541,7 +541,7 @@ kpi <- function(label, value, note) {
 
 recruitment_cards <- tags$div(
   class = "monitor-kpis",
-  kpi("Enrolment target", comma(total_enrolment_target), "Across all configured sites"),
+  kpi("Enrollment target", comma(total_enrolment_target), "Across all configured sites"),
   kpi("Enrolled", comma(n_enrolled), paste(comma(enrolment_remaining), "remaining")),
   kpi(
     "Target achieved", percent(n_enrolled / total_enrolment_target, accuracy = .1),
@@ -559,11 +559,11 @@ recruitment_cards <- tags$div(
 cat("```{=html}\n", as.character(recruitment_cards), "\n```\n", sep = "")
 ```
 
-### Cumulative enrolment
+### Cumulative enrollment
 
-**What it shows.** Actual cumulative enrolment against the straight-line plan implied by the configured recruitment start date, target date, and site targets.
+**What it shows.** Actual cumulative enrollment against the straight-line plan implied by the configured recruitment start date, target date, and site targets.
 
-**How it is calculated.** Enrolments are counted once on their enrolment date. The planned line rises evenly from zero to the total configured target; it is a monitoring reference rather than a statistical model.
+**How it is calculated.** Enrollments are counted once on their enrollment date. The planned line rises evenly from zero to the total configured target; it is a monitoring reference rather than a statistical model.
 
 ```{r}
 #| label: cumulative-enrolment
@@ -638,13 +638,13 @@ ggplot(funnel, aes(participants, stage)) +
   theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
 ```
 
-### Enrolment against site targets
+### Enrollment against site targets
 
-**What it shows.** Enrolment achieved at each site relative to its configured target.
+**What it shows.** Enrollment achieved at each site relative to its configured target.
 
-**How it is calculated.** Enrolled participants are counted once at their enrolment site and divided by that site's target in `dashboard_config.yml`.
+**How it is calculated.** Enrolled participants are counted once at their enrollment site and divided by that site's target in `dashboard_config.yml`.
 
-**Why it helps.** It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrolment.
+**Why it helps.** It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrollment.
 
 ```{r}
 #| label: site-enrolment-targets
@@ -666,7 +666,7 @@ ggplot(site_progress, aes(target_completion, site)) +
     hjust = -.08, size = 3.7
   ) +
   scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .25))) +
-  labs(x = "Enrolment target reached", y = NULL) +
+  labs(x = "Enrollment target reached", y = NULL) +
   theme_minimal(base_size = 12) +
   theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
 ```
@@ -1064,9 +1064,9 @@ if (nrow(monthly_due_targets) == 0) {
 
 ## Potential protocol deviations and violations
 
-**What it shows.** This section screens linked study forms for records that may represent a protocol deviation or violation. The supplied rules include CIMC reports without enrolment, missing programme start dates, reports dated before enrolment, duplicate participant-days, duplicate enrolments, and enrolments without recruitment records.
+**What it shows.** This section screens linked study forms for records that may represent a protocol deviation or violation. The supplied rules include CIMC reports without enrollment, missing programme start dates, reports dated before enrollment, duplicate participant-days, duplicate enrollments, and enrollments without recruitment records.
 
-**How it is calculated.** Exact participant IDs and recorded dates are compared across recruitment, enrolment, and CIMC submissions. Each rule and its provisional classification are controlled in `dashboard_config.yml`. CIMC submissions without a valid linked programme start remain in this monitoring register but are excluded from symptom and cycle analyses.
+**How it is calculated.** Exact participant IDs and recorded dates are compared across recruitment, enrollment, and CIMC submissions. Each rule and its provisional classification are controlled in `dashboard_config.yml`. CIMC submissions without a valid linked programme start remain in this monitoring register but are excluded from symptom and cycle analyses.
 
 **Why it helps.** A linkage problem should create an actionable signal rather than prevent the dashboard from rendering. These are **potential** events: the dashboard does not determine seriousness, causality, or reportability. The study team must verify source records and adjudicate each flag under the approved protocol and deviation-management procedures.
 
@@ -1325,7 +1325,7 @@ downloads <- tags$div(
   download_card(
     "Eligible but not enrolled", nrow(eligible_not_enrolled),
     "eligible_not_enrolled_targets.csv",
-    paste0("Eligible for at least ", config$monitoring$eligible_not_enrolled_after_days, " days without an enrolment record")
+    paste0("Eligible for at least ", config$monitoring$eligible_not_enrolled_after_days, " days without an enrollment record")
   ),
   download_card(
     "Enrolled with no daily report", nrow(no_daily_targets),
@@ -1390,7 +1390,7 @@ if (publish_action_lists) {
 
 ## Monitoring definitions
 
-- **Expected daily reports** run from enrolment through the earliest of the configured follow-up day (`r expected_study_days`), the data cutoff, or a recorded method stop date.
+- **Expected daily reports** run from enrollment through the earliest of the configured follow-up day (`r expected_study_days`), the data cutoff, or a recorded method stop date.
 - **Monthly reports expected** are calendar-month sections due on configured day `r monthly_due_day` of a month within that observed interval. The supplied setting matches the revised CIMC form.
 - **Current consecutive missed days** count backwards from the participant's latest due day. A submitted form breaks the streak.
 - **`r followup_complete_label`** describes elapsed follow-up time, not questionnaire adherence.

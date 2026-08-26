@@ -68,11 +68,40 @@
   margin-bottom: 0;
 }
 
+/* Tables are operational tools, so cell boundaries need to remain visible even
+   where adjacent values have similar widths (for example counts and dates). */
+main.content table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #b9c4c9;
+}
+
+main.content table th,
+main.content table td {
+  padding: .5rem .65rem;
+  border: 1px solid #c8d1d5;
+  vertical-align: middle;
+}
+
+main.content table thead th {
+  background: #edf2f3;
+  border-bottom: 2px solid #9eacb2;
+  color: #263b46;
+}
+
+main.content table tbody tr:nth-child(even) td {
+  background: rgba(224, 232, 234, .35);
+}
+
+main.content table tbody tr:hover td {
+  background: rgba(122, 190, 187, .16);
+}
+
 .monitor-table-scroll thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--bs-body-bg);
+  background: #edf2f3;
 }
 
 .dashboard-explainer {
@@ -125,9 +154,13 @@
   font-size: .9rem;
 }
 
-.monitor-table-compact td,
-.monitor-table-compact th {
+.monitor-table-compact td {
   white-space: nowrap;
+}
+
+.monitor-table-compact th {
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .full-tracking-scroll {

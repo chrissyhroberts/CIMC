@@ -196,7 +196,7 @@ derive_epro_files <- function(enrolment, cimc) {
   require_fields(
     enrolment,
     c("uniqueid", "contraception_start_date"),
-    "Enrolment submissions"
+    "Enrollment submissions"
   )
   require_fields(
     cimc,
@@ -258,7 +258,7 @@ derive_epro_files <- function(enrolment, cimc) {
   if (nrow(excluded_from_analysis) > 0) {
     warning(
       nrow(excluded_from_analysis),
-      " CIMC submission(s) have no linked enrolment programme start date. ",
+      " CIMC submission(s) have no linked enrollment programme start date. ",
       "They remain in the raw monitoring data but are excluded from symptom analyses."
     )
   }
@@ -346,7 +346,7 @@ stage_production_data <- function() {
   require_fields(
     downloaded$enrolment,
     c("organization", "uniqueid", "enrollment_date", "contraception_start_date"),
-    "Enrolment submissions"
+    "Enrollment submissions"
   )
 
   # Kobo omits a JSON field when none of the downloaded records contains it.
@@ -385,8 +385,8 @@ stage_production_data <- function() {
     recruitment = paste0(production$base_url, "/api/v2/assets/", asset_uids[["recruitment"]], "/data/"),
     enrolment = paste0(production$base_url, "/api/v2/assets/", asset_uids[["enrolment"]], "/data/"),
     cimc = paste0(production$base_url, "/api/v2/assets/", asset_uids[["cimc"]], "/data/"),
-    daily_data = "derived from current CIMC and enrolment submissions",
-    monthly_data = "derived from current CIMC and enrolment submissions"
+    daily_data = "derived from current CIMC and enrollment submissions",
+    monthly_data = "derived from current CIMC and enrollment submissions"
   )
   cutoff_strategy <- production$data_cutoff_strategy
   effective_data_cutoff <- if (identical(cutoff_strategy, "retrieval_date")) {

@@ -213,7 +213,7 @@ cat("```{=html}\n", as.character(site_cards), "\n```\n", sep = "")
 <details class="dashboard-section">
 <summary>Daily completion heatmap — full protocol period</summary>
 
-Rows are ordered by the configured missing-gap measure. Protocol day 1 is the participant's enrolment date.
+Rows are ordered by the configured missing-gap measure. Protocol day 1 is the participant's enrollment date.
 
 ```{r}
 #| label: site-daily-scroll-open

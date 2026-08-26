@@ -230,7 +230,7 @@ recruitment$notes <- if_else(
 )
 recruitment$submitMessage <- if_else(
   recruitment$eligibility_status == "eligible",
-  "Eligible; continue to enrolment form", "Screening complete"
+  "Eligible; continue to enrollment form", "Screening complete"
 )
 
 recruitment <- add_missing_columns(recruitment, recruitment_fields)
