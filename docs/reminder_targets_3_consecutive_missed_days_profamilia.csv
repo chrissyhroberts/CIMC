@@ -1,9 +1,0 @@
-participant_id,organization,site,current_consecutive_missed_days,last_report_date,reminder_method,reminder_contact,daily_completion
-02-CIMC-0217,profamilia,Profamilia,26,2026-07-29,whatsapp,19995550113,0.5492957746478874
-02-CIMC-0159,profamilia,Profamilia,13,2026-08-11,calendar,,0.7014925373134329
-02-CIMC-0101,profamilia,Profamilia,5,2026-08-19,calendar,,0.7741935483870968
-02-CIMC-0048,profamilia,Profamilia,3,2026-08-21,whatsapp,19995550030,0.7857142857142857
-02-CIMC-0060,profamilia,Profamilia,3,2026-08-21,no_reminder,,0.8857142857142857
-02-CIMC-0142,profamilia,Profamilia,3,2026-08-21,calendar,,0.8867924528301887
-02-CIMC-0182,profamilia,Profamilia,3,2026-08-21,whatsapp,19995550094,0.5263157894736842
-02-CIMC-0243,profamilia,Profamilia,3,2026-08-21,calendar,,0.5833333333333334
