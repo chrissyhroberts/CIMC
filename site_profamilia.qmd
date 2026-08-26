@@ -1,0 +1,21 @@
+---
+title: "Profamilia monitoring"
+subtitle: "Recruitment, follow-up, action queues, and data quality"
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 2
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: site-parameter
+#| include: false
+site_code <- "profamilia"
+```
+
+{{< include _site_monitoring_content.qmd >}}

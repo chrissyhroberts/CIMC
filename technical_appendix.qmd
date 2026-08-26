@@ -51,7 +51,7 @@ The dashboard's study-specific settings are held in one file: [`dashboard_config
 1. Make a copy of the current `dashboard_config.yml` before making a substantial change.
 2. Open the file in a plain-text editor and change only the value after the relevant colon.
 3. Keep the existing indentation. YAML uses spaces to show which settings belong together; tabs should not be used.
-4. Save the file, render the Quarto book again, and review the data-quality page as well as the chart affected by the change.
+4. Save the file, render the Quarto book again, and review the study-wide and relevant site data-quality sections as well as the chart affected by the change.
 5. Record analytically important changes—especially cycle rules, denominators, date cutoffs, and confidence levels—so results from different dashboard versions are not compared as if their definitions were identical.
 
 YAML values have a few conventions:

@@ -11,8 +11,19 @@ action_files <- c(
   "enrolled_no_daily_submission_targets.csv",
   "monthly_report_due_targets.csv",
   "protocol_deviation_violation_review.csv",
-  "participant_progress_summary.csv"
+  "participant_progress_summary.csv",
+  "participant_followup_gap_summary.csv"
 )
+site_codes <- names(unlist(config$labels$sites))
+site_action_files <- unlist(lapply(
+  action_files,
+  function(path) vapply(
+    site_codes,
+    function(site_code) sub("\\.csv$", paste0("_", site_code, ".csv"), path),
+    character(1)
+  )
+))
+action_files <- unique(c(action_files, site_action_files))
 development_files <- c(
   "dummy_recruitment_form_data.csv",
   "dummy_enrolment_sociodemographics_data.csv",

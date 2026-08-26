@@ -30,7 +30,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./menstrual_epro_daily_monthly_analysis.html" rel="next">
+<link href="./site_wmru.html" rel="next">
 <link href="./index.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -123,26 +123,38 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./site_wmru.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Wits MRU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_profamilia.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Profamilia monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_ohsu.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">OHSU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./menstrual_epro_daily_monthly_analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./monthly_epro_analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./data_quality.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data quality and analysis checks</span></span></a>
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./technical_appendix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
   </div>
 </li>
     </ul>
@@ -336,6 +348,76 @@ ul.task-list li input[type="checkbox"] {
 </section>
 
 </main> <!-- /main -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const startsExplanation = (element) => {
+    if (!element || element.tagName !== "P") return false;
+    const lead = element.querySelector(":scope > strong:first-child");
+    return lead && /^(What|How|Why)(\s|\.|$)/i.test(lead.textContent.trim());
+  };
+
+  document.querySelectorAll("main.content").forEach((main) => {
+    const paragraphs = Array.from(main.querySelectorAll("p"));
+    paragraphs.forEach((first) => {
+      if (
+        !first.isConnected ||
+        first.closest(".dashboard-explainer") ||
+        !startsExplanation(first)
+      ) return;
+
+      const group = [first];
+      let next = first.nextElementSibling;
+      while (startsExplanation(next)) {
+        group.push(next);
+        next = next.nextElementSibling;
+      }
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+      first.before(details);
+      group.forEach((paragraph) => details.appendChild(paragraph));
+    });
+
+    // Give every rendered content section the same optional explanation panel.
+    // Existing What/How/Why text is retained; chart-only sections receive a
+    // short fallback so the dashboard remains visually concise and consistent.
+    main.querySelectorAll("section.level2, section.level3, section.level4").forEach((section) => {
+      const directChildren = Array.from(section.children);
+      if (directChildren.some((child) => child.matches("details.dashboard-explainer"))) return;
+
+      const heading = directChildren.find((child) => /^H[2-4]$/.test(child.tagName));
+      if (!heading) return;
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+
+      let next = heading.nextElementSibling;
+      const openingParagraphs = [];
+      while (next && next.tagName === "P" && !next.closest("details")) {
+        openingParagraphs.push(next);
+        next = next.nextElementSibling;
+      }
+
+      if (openingParagraphs.length > 0) {
+        openingParagraphs.forEach((paragraph) => details.appendChild(paragraph));
+      } else {
+        const description = document.createElement("p");
+        const title = heading.textContent.trim().replace(/\s+/g, " ");
+        description.textContent = `This section summarises ${title.toLowerCase()} using the currently available study data and configured monitoring rules.`;
+        details.appendChild(description);
+      }
+
+      heading.insertAdjacentElement("afterend", details);
+    });
+  });
+});
+</script>
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -743,8 +825,8 @@ ul.task-list li input[type="checkbox"] {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./menstrual_epro_daily_monthly_analysis.html" class="pagination-link" aria-label="Daily bleeding and pain">
-        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./site_wmru.html" class="pagination-link" aria-label="Wits MRU monitoring">
+        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Wits MRU monitoring</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

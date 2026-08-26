@@ -14,9 +14,11 @@ book:
   chapters:
   - index.qmd
   - study_statistics.qmd
+  - site_wmru.qmd
+  - site_profamilia.qmd
+  - site_ohsu.qmd
   - menstrual_epro_daily_monthly_analysis.qmd
   - monthly_epro_analysis.qmd
-  - data_quality.qmd
   - technical_appendix.qmd
 
 
@@ -24,6 +26,7 @@ format:
   html:
     theme: cosmo
     css: monitoring.css
+    include-after-body: dashboard-explainers.html
     page-navigation: true
 
 

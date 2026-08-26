@@ -1,0 +1,70 @@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const startsExplanation = (element) => {
+    if (!element || element.tagName !== "P") return false;
+    const lead = element.querySelector(":scope > strong:first-child");
+    return lead && /^(What|How|Why)(\s|\.|$)/i.test(lead.textContent.trim());
+  };
+
+  document.querySelectorAll("main.content").forEach((main) => {
+    const paragraphs = Array.from(main.querySelectorAll("p"));
+    paragraphs.forEach((first) => {
+      if (
+        !first.isConnected ||
+        first.closest(".dashboard-explainer") ||
+        !startsExplanation(first)
+      ) return;
+
+      const group = [first];
+      let next = first.nextElementSibling;
+      while (startsExplanation(next)) {
+        group.push(next);
+        next = next.nextElementSibling;
+      }
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+      first.before(details);
+      group.forEach((paragraph) => details.appendChild(paragraph));
+    });
+
+    // Give every rendered content section the same optional explanation panel.
+    // Existing What/How/Why text is retained; chart-only sections receive a
+    // short fallback so the dashboard remains visually concise and consistent.
+    main.querySelectorAll("section.level2, section.level3, section.level4").forEach((section) => {
+      const directChildren = Array.from(section.children);
+      if (directChildren.some((child) => child.matches("details.dashboard-explainer"))) return;
+
+      const heading = directChildren.find((child) => /^H[2-4]$/.test(child.tagName));
+      if (!heading) return;
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+
+      let next = heading.nextElementSibling;
+      const openingParagraphs = [];
+      while (next && next.tagName === "P" && !next.closest("details")) {
+        openingParagraphs.push(next);
+        next = next.nextElementSibling;
+      }
+
+      if (openingParagraphs.length > 0) {
+        openingParagraphs.forEach((paragraph) => details.appendChild(paragraph));
+      } else {
+        const description = document.createElement("p");
+        const title = heading.textContent.trim().replace(/\s+/g, " ");
+        description.textContent = `This section summarises ${title.toLowerCase()} using the currently available study data and configured monitoring rules.`;
+        details.appendChild(description);
+      }
+
+      heading.insertAdjacentElement("afterend", details);
+    });
+  });
+});
+</script>

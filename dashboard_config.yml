@@ -76,6 +76,10 @@ study:
   expected_daily_reports: 90
   contraceptive_start_eligibility_days: 74
   monthly_due_day: 1
+  # Recruitment planning dates used for the planned trajectory and projected
+  # completion measures on the operational front page.
+  recruitment_start_date: "2026-05-25"
+  recruitment_target_date: "2026-09-30"
   # Time bands used for programme-time summaries; these are not menstrual cycles.
   programme_period_days: 30
   # Recruitment targets used on page 1.
@@ -91,6 +95,18 @@ monitoring:
   no_daily_report_after_days: 2
   monthly_report_grace_days: 3
   good_daily_completion_threshold: 0.80
+  # Window used to estimate the current recruitment rate and projected finish.
+  recruitment_pace_window_days: 28
+  # Recent participant-day window shown in the completion tracking grid.
+  recent_daily_tracking_days: 14
+  recent_daily_tracking_max_participants: 18
+  # Full-study calendar ranking. Options: gap_episodes, missed_days,
+  # longest_gap, or monthly_missed. null displays every participant.
+  full_tracking_sort: gap_episodes
+  full_tracking_max_participants: null
+  full_tracking_row_height_inches: 0.20
+  # Reference line and status colour used in site completion displays.
+  daily_completion_target: 0.85
   action_list_preview_rows: 30
 
 # --- Protocol-deviation and violation monitoring ---------------------------
@@ -163,6 +179,8 @@ display:
   cycle_days: 35
   cycle_day_tick_interval: 5
   upset_max_intersections: 10
+  # Visible height of the scrollable full-study participant calendar.
+  full_tracking_scroll_height: "72vh"
 
 # --- Confidence intervals ---------------------------------------------------
 uncertainty:

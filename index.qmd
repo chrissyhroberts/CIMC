@@ -21,6 +21,7 @@ library(knitr)
 library(yaml)
 library(htmltools)
 library(patchwork)
+source("operational_tracking_helpers.R")
 
 config <- read_yaml("dashboard_config.yml")
 id_column_type <- cols(uniqueid = col_character())
@@ -398,16 +399,43 @@ write_csv(eligible_not_enrolled, "eligible_not_enrolled_targets.csv", na = "")
 write_csv(no_daily_targets, "enrolled_no_daily_submission_targets.csv", na = "")
 write_csv(monthly_due_targets, "monthly_report_due_targets.csv", na = "")
 write_csv(protocol_review, "protocol_deviation_violation_review.csv", na = "")
-write_csv(
-  progress |>
-    transmute(
-      participant_id = uniqueid, organization, site, enrollment_date,
-      planned_end_date, status, daily_reports_received, expected_daily_reports,
-      daily_completion, monthly_reports_received, expected_monthly_reports,
-      monthly_completion, current_consecutive_missed_days, last_report_date,
-      method_stop_date
-    ),
-  "participant_progress_summary.csv", na = ""
+progress_export <- progress |>
+  transmute(
+    participant_id = uniqueid, organization, site, enrollment_date,
+    planned_end_date, status, daily_reports_received, expected_daily_reports,
+    daily_completion, monthly_reports_received, expected_monthly_reports,
+    monthly_completion, current_consecutive_missed_days, last_report_date,
+    method_stop_date
+  )
+write_csv(progress_export, "participant_progress_summary.csv", na = "")
+
+write_site_versions <- function(data, filename, organization_field = "organization") {
+  for (site_code in names(site_labels)) {
+    site_name <- unname(site_labels[[site_code]])
+    if (organization_field %in% names(data)) {
+      site_data <- data |> filter(.data[[organization_field]] == site_code)
+    } else {
+      site_data <- data |> filter(as.character(site) == site_name)
+    }
+    site_filename <- str_replace(filename, "\\.csv$", paste0("_", site_code, ".csv"))
+    write_csv(site_data, site_filename, na = "")
+  }
+}
+
+walk2(
+  list(
+    reminder_targets, eligible_not_enrolled, no_daily_targets,
+    monthly_due_targets, protocol_review, progress_export
+  ),
+  c(
+    "reminder_targets_3_consecutive_missed_days.csv",
+    "eligible_not_enrolled_targets.csv",
+    "enrolled_no_daily_submission_targets.csv",
+    "monthly_report_due_targets.csv",
+    "protocol_deviation_violation_review.csv",
+    "participant_progress_summary.csv"
+  ),
+  write_site_versions
 )
 
 n_screened <- nrow(recruitment)
@@ -418,15 +446,71 @@ n_reached_followup <- sum(progress$status == followup_complete_label)
 n_protocol_participants <- n_distinct(protocol_review$participant_id)
 n_potential_violations <- sum(protocol_review$classification == "Potential violation")
 n_potential_deviations <- sum(protocol_review$classification == "Potential deviation")
-overall_daily_completion <- sum(progress$daily_reports_received) / sum(progress$expected_daily_reports)
-overall_monthly_completion <- sum(progress$monthly_reports_received) / sum(progress$expected_monthly_reports)
+overall_daily_denominator <- sum(progress$expected_daily_reports)
+overall_monthly_denominator <- sum(progress$expected_monthly_reports)
+overall_daily_completion <- if (overall_daily_denominator > 0) {
+  sum(progress$daily_reports_received) / overall_daily_denominator
+} else {
+  NA_real_
+}
+overall_monthly_completion <- if (overall_monthly_denominator > 0) {
+  sum(progress$monthly_reports_received) / overall_monthly_denominator
+} else {
+  NA_real_
+}
+
+recruitment_start_date <- as.Date(config$study$recruitment_start_date)
+recruitment_target_date <- as.Date(config$study$recruitment_target_date)
+recruitment_pace_days <- config$monitoring$recruitment_pace_window_days
+tracking_days <- config$monitoring$recent_daily_tracking_days
+tracking_max_participants <- config$monitoring$recent_daily_tracking_max_participants
+daily_completion_target <- config$monitoring$daily_completion_target
+total_enrolment_target <- sum(as.integer(site_targets), na.rm = TRUE)
+enrolment_remaining <- max(total_enrolment_target - n_enrolled, 0L)
+pace_window_start <- max(recruitment_start_date, data_cutoff - recruitment_pace_days + 1L)
+pace_window_observed_days <- max(as.integer(data_cutoff - pace_window_start) + 1L, 1L)
+recent_enrolments <- sum(
+  enrolment$enrollment_date >= pace_window_start &
+    enrolment$enrollment_date <= data_cutoff,
+  na.rm = TRUE
+)
+current_recruitment_pace <- recent_enrolments / pace_window_observed_days * 7
+projected_completion_date <- if (enrolment_remaining == 0) {
+  max(enrolment$enrollment_date, na.rm = TRUE)
+} else if (is.finite(current_recruitment_pace) && current_recruitment_pace > 0) {
+  data_cutoff + ceiling(enrolment_remaining / current_recruitment_pace * 7)
+} else {
+  as.Date(NA)
+}
+plan_elapsed <- pmin(
+  pmax(as.numeric(data_cutoff - recruitment_start_date) /
+         as.numeric(recruitment_target_date - recruitment_start_date), 0),
+  1
+)
+planned_enrolment_to_date <- round(total_enrolment_target * plan_elapsed)
+enrolment_vs_plan <- n_enrolled - planned_enrolment_to_date
+expected_daily_to_date <- sum(progress$expected_daily_reports, na.rm = TRUE)
+received_daily_to_date <- sum(progress$daily_reports_received, na.rm = TRUE)
+operational_tracking <- op_prepare_tracking(progress, cimc, config, data_cutoff)
+gap_export <- op_sort_daily(
+  operational_tracking$daily_summary,
+  config$monitoring$full_tracking_sort
+) |>
+  transmute(
+    participant_id = uniqueid, organization, site, enrollment_date,
+    planned_end_date, observed_end_date, observed_days, daily_received,
+    missed_days, gap_episodes, longest_gap, monthly_due, monthly_received,
+    monthly_missed, current_completion = daily_completion
+  )
+write_csv(gap_export, "participant_followup_gap_summary.csv", na = "")
+write_site_versions(gap_export, "participant_followup_gap_summary.csv")
 ```
 
-Data are current through `r format(data_cutoff, "%d %B %Y")`. This front page is operational: it shows recruitment flow, follow-up coverage, and participants requiring action. Counts use linked participant IDs across the recruitment, enrolment, and CIMC forms.
+Data are current through `r format(data_cutoff, "%d %B %Y")`. This front page is operational: it shows recruitment flow, survey completion, and participants requiring action.
 
 **Current source.** `r data_source_label`; staged at `r data_prepared_at`. Change `data_source.mode` in `dashboard_config.yml` to switch between development and production ingestion.
 
-**What.** This page gives the study team a current operational picture of recruitment, enrolment, follow-up and missing reports.
+**What.** This page gives the study team a current operational picture of recruitment, enrolment, follow-up and missing reports. It covers the client-specified recruitment trajectory, screening funnel, site delivery, daily completion trend, follow-up queue, recent participant tracking, and site completion.
 
 **How.** Records are linked by participant ID. Expected reports run from enrolment to the earliest of the configured follow-up end, data cutoff, or recorded method stop. The action lists apply the thresholds documented in `dashboard_config.yml`.
 
@@ -445,22 +529,538 @@ kpi <- function(label, value, note) {
   )
 }
 
-cards <- tags$div(
+```
+
+## Recruitment monitoring
+
+<div class="monitor-section-kicker">Overall and by site · through `r format(data_cutoff, "%d %B %Y")`</div>
+
+```{r}
+#| label: recruitment-kpis
+#| results: asis
+
+recruitment_cards <- tags$div(
   class = "monitor-kpis",
-  kpi("Screened", comma(n_screened), "Recruitment forms"),
-  kpi("Eligible", comma(n_eligible), percent(n_eligible / n_screened, accuracy = .1)),
-  kpi("Enrolled", comma(n_enrolled), paste0(percent(n_enrolled / n_eligible, accuracy = .1), " of eligible")),
-  kpi("Active follow-up", comma(n_active), paste("Before day", expected_study_days)),
-  kpi(followup_complete_label, comma(n_reached_followup), "Observation window reached"),
-  kpi("Daily completion", percent(overall_daily_completion, accuracy = .1), "Reports received / expected"),
-  kpi("Monthly completion", percent(overall_monthly_completion, accuracy = .1), "Due monthly sections"),
-  kpi("Reminder targets", comma(nrow(reminder_targets)), paste0("≥", missed_days_threshold, " consecutive missed days")),
-  kpi("Protocol flags", comma(nrow(protocol_review)), paste(comma(n_protocol_participants), "participant(s)")),
-  kpi("Data source", str_to_title(data_mode), data_prepared_at)
+  kpi("Enrolment target", comma(total_enrolment_target), "Across all configured sites"),
+  kpi("Enrolled", comma(n_enrolled), paste(comma(enrolment_remaining), "remaining")),
+  kpi(
+    "Target achieved", percent(n_enrolled / total_enrolment_target, accuracy = .1),
+    paste(abs(enrolment_vs_plan), if (enrolment_vs_plan < 0) "behind" else "ahead of", "planned pace")
+  ),
+  kpi("Current pace", paste0(number(current_recruitment_pace, accuracy = .1), "/week"),
+      paste("Most recent", recruitment_pace_days, "days")),
+  kpi(
+    "Projected completion",
+    if_else(is.na(projected_completion_date), "Not estimable", format(projected_completion_date, "%d %b %Y")),
+    paste("Planned", format(recruitment_target_date, "%d %b %Y"))
+  )
 )
 
-cat("```{=html}\n", as.character(cards), "\n```\n", sep = "")
+cat("```{=html}\n", as.character(recruitment_cards), "\n```\n", sep = "")
 ```
+
+### Cumulative enrolment
+
+**What it shows.** Actual cumulative enrolment against the straight-line plan implied by the configured recruitment start date, target date, and site targets.
+
+**How it is calculated.** Enrolments are counted once on their enrolment date. The planned line rises evenly from zero to the total configured target; it is a monitoring reference rather than a statistical model.
+
+```{r}
+#| label: cumulative-enrolment
+#| fig-height: 4.2
+#| fig-width: 10
+
+recruitment_weeks <- seq(
+  as.Date(cut(recruitment_start_date, "week", start.on.monday = TRUE)),
+  as.Date(cut(max(data_cutoff, recruitment_target_date), "week", start.on.monday = TRUE)),
+  by = "week"
+)
+
+cumulative_enrolment <- tibble(week = recruitment_weeks) |>
+  mutate(
+    week_end = week + 6L,
+    Actual = map_int(week_end, ~ sum(enrolment$enrollment_date <= min(.x, data_cutoff), na.rm = TRUE)),
+    Actual = if_else(week > data_cutoff, NA_integer_, Actual),
+    Planned = round(total_enrolment_target * pmin(
+      pmax(as.numeric(week_end - recruitment_start_date) /
+             as.numeric(recruitment_target_date - recruitment_start_date), 0),
+      1
+    ))
+  ) |>
+  select(week, Actual, Planned) |>
+  pivot_longer(c(Actual, Planned), names_to = "trajectory", values_to = "participants")
+
+ggplot(cumulative_enrolment, aes(week, participants, colour = trajectory)) +
+  geom_line(linewidth = .9, na.rm = TRUE) +
+  geom_point(size = 1.7, na.rm = TRUE) +
+  geom_hline(yintercept = total_enrolment_target, colour = "#9aa8ad", linetype = 3) +
+  scale_colour_manual(values = c(Actual = "#167c77", Planned = "#d99b21")) +
+  scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .08))) +
+  labs(x = NULL, y = "Participants enrolled", colour = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.minor = element_blank())
+```
+
+### Recruitment funnel
+
+**What it shows.** Unique people at successive stages from screening through daily reporting and completion of the observation window.
+
+**How it is calculated.** A person appears in every stage they have reached, so this is a cumulative funnel rather than a set of mutually exclusive groups.
+
+**Why it helps.** The largest drop between adjacent stages identifies where recruitment or onboarding may need attention.
+
+```{r}
+#| label: recruitment-funnel
+#| fig-height: 4.5
+#| fig-width: 10
+
+funnel <- tibble(
+  stage = factor(
+    c("Screened", "Eligible", "Enrolled", "Submitted ≥1 daily form", followup_complete_label),
+    levels = rev(c("Screened", "Eligible", "Enrolled", "Submitted ≥1 daily form", followup_complete_label))
+  ),
+  participants = c(
+    n_screened, n_eligible, n_enrolled,
+    sum(progress$daily_reports_received > 0), n_reached_followup
+  )
+) |>
+  mutate(percent_screened = participants / n_screened)
+
+ggplot(funnel, aes(participants, stage)) +
+  geom_col(fill = "#167c77", width = .66) +
+  geom_text(
+    aes(label = sprintf("%s  (%s)", comma(participants), percent(percent_screened, accuracy = .1))),
+    hjust = -.08, size = 3.7
+  ) +
+  scale_x_continuous(expand = expansion(mult = c(0, .25))) +
+  labs(x = "Participants", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+### Enrolment against site targets
+
+**What it shows.** Enrolment achieved at each site relative to its configured target.
+
+**How it is calculated.** Enrolled participants are counted once at their enrolment site and divided by that site's target in `dashboard_config.yml`.
+
+**Why it helps.** It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrolment.
+
+```{r}
+#| label: site-enrolment-targets
+#| fig-height: 4.2
+#| fig-width: 9
+
+site_progress <- enrolment |>
+  count(organization, site, name = "enrolled") |>
+  mutate(
+    target = as.integer(site_targets[organization]),
+    target_completion = enrolled / target
+  )
+
+ggplot(site_progress, aes(target_completion, site)) +
+  geom_vline(xintercept = 1, colour = "#8c4f7d", linewidth = .7) +
+  geom_col(fill = "#167c77", width = .58) +
+  geom_text(
+    aes(label = sprintf("%s / %s  (%s)", enrolled, target, percent(target_completion, accuracy = 1))),
+    hjust = -.08, size = 3.7
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .25))) +
+  labs(x = "Enrolment target reached", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+### Recruitment progress by site
+
+```{r}
+#| label: site-recruitment-table
+#| results: asis
+
+site_recruitment_summary <- tibble(
+  organization = names(site_targets),
+  site = unname(site_labels[names(site_targets)]),
+  target = as.integer(site_targets)
+) |>
+  left_join(
+    recruitment |>
+      group_by(organization) |>
+      summarise(
+        screened = n(),
+        eligible = sum(eligibility_status == "eligible", na.rm = TRUE),
+        .groups = "drop"
+      ),
+    by = "organization"
+  ) |>
+  left_join(
+    enrolment |>
+      group_by(organization) |>
+      summarise(
+        enrolled = n(),
+        recent_enrolled = sum(
+          enrollment_date >= pace_window_start & enrollment_date <= data_cutoff,
+          na.rm = TRUE
+        ),
+        .groups = "drop"
+      ),
+    by = "organization"
+  ) |>
+  mutate(
+    across(c(screened, eligible, enrolled, recent_enrolled), ~ replace_na(.x, 0L)),
+    progress = enrolled / target,
+    average_per_week = recent_enrolled / pace_window_observed_days * 7,
+    remaining = pmax(target - enrolled, 0L),
+    projected_end = case_when(
+      remaining == 0 ~ as.Date(data_cutoff),
+      average_per_week > 0 ~ data_cutoff + ceiling(remaining / average_per_week * 7),
+      TRUE ~ as.Date(NA)
+    )
+  ) |>
+  transmute(
+    Site = site,
+    Screened = screened,
+    Eligible = eligible,
+    Enrolled = enrolled,
+    `Progress toward site goal` = percent(progress, accuracy = .1),
+    `Average / week` = number(average_per_week, accuracy = .1),
+    Remaining = remaining,
+    `Projected end` = if_else(is.na(projected_end), "Not estimable", format(projected_end, "%d %b %Y"))
+  )
+
+site_table <- site_recruitment_summary |>
+  kable(format = "html", align = c("l", "r", "r", "r", "r", "r", "r", "l"))
+cat('<div class="monitor-table-scroll monitor-table-compact">', site_table, '</div>', sep = "\n")
+```
+
+## Daily survey completion monitoring
+
+<div class="monitor-section-kicker">Active participants · all sites · most recent data through `r format(data_cutoff, "%d %B %Y")`</div>
+
+```{r}
+#| label: daily-completion-kpis
+#| results: asis
+
+daily_cards <- tags$div(
+  class = "monitor-kpis",
+  kpi("Active participants", comma(n_active), paste("Across", n_distinct(progress$site), "sites")),
+  kpi("Expected to date", comma(expected_daily_to_date), "Participant-days"),
+  kpi("Completed", comma(received_daily_to_date),
+      paste(comma(max(expected_daily_to_date - received_daily_to_date, 0)), "missing")),
+  kpi("Completion rate", if_else(is.na(overall_daily_completion), "Not yet available", percent(overall_daily_completion, accuracy = .1)),
+      paste0("Target ≥", percent(daily_completion_target, accuracy = 1))),
+  kpi("Needs follow-up", comma(nrow(reminder_targets)),
+      paste0("≥", missed_days_threshold, " consecutive missed days"))
+)
+cat("```{=html}\n", as.character(daily_cards), "\n```\n", sep = "")
+```
+
+### Participant progress
+
+**What it shows.** The current follow-up status of enrolled participants within each site.
+
+**How it is calculated.** Status uses the configured observation window and method-discontinuation responses. “`r followup_complete_label`” means the time window elapsed; it does not require perfect questionnaire completion.
+
+**Why it helps.** It separates participants who remain under active follow-up from those who have completed, stopped, or never begun daily reporting.
+
+```{r}
+#| label: participant-status
+#| fig-height: 4.5
+#| fig-width: 10
+
+status_levels <- c(
+  "Active follow-up", followup_complete_label, "Enrolled — no daily report",
+  "Stopped method / follow-up ended"
+)
+
+status_by_site <- progress |>
+  count(site, status) |>
+  complete(site, status = status_levels, fill = list(n = 0L)) |>
+  group_by(site) |>
+  mutate(percent = n / sum(n), status = factor(status, levels = status_levels)) |>
+  ungroup()
+
+ggplot(status_by_site, aes(percent, site, fill = status)) +
+  geom_col(width = .62) +
+  geom_text(
+    aes(label = if_else(percent >= .07, paste0(n, "\n", percent(percent, accuracy = 1)), "")),
+    position = position_stack(vjust = .5), size = 3, lineheight = .9
+  ) +
+  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = 0)) +
+  scale_fill_manual(values = c("#167c77", "#8fc5c1", "#d8c8a5", "#8c4f7d")) +
+  labs(x = "Percent of enrolled participants", y = NULL, fill = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+### Daily completion trend
+
+**What it shows.** The proportion of expected daily reports actually received in each site-week.
+
+**How it is calculated.** Each point divides received participant-days by expected participant-days among people under observation that week.
+
+**Why it helps.** It separates growth in the enrolled cohort from genuine reporting adherence and makes site-specific implementation changes visible over time.
+
+```{r}
+#| label: weekly-daily-completion
+#| fig-height: 5
+#| fig-width: 10
+
+due_calendar <- progress |>
+  select(uniqueid, site, enrollment_date, observation_end_date) |>
+  pmap_dfr(function(uniqueid, site, enrollment_date, observation_end_date) {
+    tibble(uniqueid = uniqueid, site = site, date = seq(enrollment_date, observation_end_date, by = "day"))
+  }) |>
+  mutate(
+    received = paste0(uniqueid, date) %in% paste0(cimc$uniqueid, cimc$date),
+    week = as.Date(cut(date, "week", start.on.monday = TRUE))
+  ) |>
+  group_by(site, week) |>
+  summarise(expected = n(), received = sum(received), completion = received / expected, .groups = "drop")
+
+ggplot(due_calendar, aes(week, completion, colour = site, linetype = site)) +
+  geom_line(linewidth = .8) +
+  geom_point(size = 1.8) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(x = NULL, y = "Daily reports received / expected", colour = NULL, linetype = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "top", panel.grid.minor = element_blank())
+```
+
+### Completion by site
+
+```{r}
+#| label: daily-completion-by-site
+#| fig-height: 3.8
+#| fig-width: 9
+
+completion_by_site <- progress |>
+  group_by(site) |>
+  summarise(
+    expected = sum(expected_daily_reports, na.rm = TRUE),
+    received = sum(daily_reports_received, na.rm = TRUE),
+    completion = if_else(expected > 0, received / expected, NA_real_),
+    .groups = "drop"
+  )
+
+ggplot(completion_by_site, aes(completion, site, fill = completion >= daily_completion_target)) +
+  geom_vline(xintercept = daily_completion_target, colour = "#67777b", linetype = 3) +
+  geom_col(width = .55, show.legend = FALSE) +
+  geom_text(
+    aes(label = percent(completion, accuracy = .1)),
+    hjust = -.12, size = 3.7
+  ) +
+  scale_fill_manual(values = c(`TRUE` = "#167c77", `FALSE` = "#d99b21")) +
+  scale_x_continuous(
+    labels = percent_format(accuracy = 1), limits = c(0, 1),
+    expand = expansion(mult = c(0, .08))
+  ) +
+  labs(x = "Daily reports received / expected", y = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+```
+
+<details class="dashboard-section">
+<summary>Daily participant tracking — most recent `r tracking_days` days</summary>
+
+**What it shows.** A compact recent completion calendar for the active participants most in need of attention. Green cells are received daily forms, coral cells are missed due forms, and grey cells were not due.
+
+**How it is calculated.** Rows prioritise participants meeting the consecutive-miss rule and then those with the lowest overall daily completion. The number of displayed rows and days is configurable. Participant identifiers are shown only when publication of action lists is enabled.
+
+```{r}
+#| label: recent-participant-tracking
+#| fig-height: 10
+#| fig-width: 11
+
+tracking_candidates <- progress |>
+  filter(status == "Active follow-up") |>
+  mutate(
+    follow_up = current_consecutive_missed_days >= missed_days_threshold
+  ) |>
+  arrange(site, desc(follow_up), daily_completion, uniqueid) |>
+  group_by(site) |>
+  slice_head(n = tracking_max_participants) |>
+  mutate(
+    display_id = if (publish_action_lists) {
+      uniqueid
+    } else {
+      paste0(as.character(site), " participant ", sprintf("%02d", row_number()))
+    }
+  ) |>
+  ungroup() |>
+  mutate(display_id = factor(display_id, levels = rev(display_id)))
+
+tracking_dates <- seq(data_cutoff - tracking_days + 1L, data_cutoff, by = "day")
+tracking_grid <- crossing(
+  tracking_candidates |>
+    select(uniqueid, site, display_id, enrollment_date, observation_end_date, follow_up),
+  date = tracking_dates
+) |>
+  mutate(
+    due = date >= enrollment_date & date <= observation_end_date,
+    received = paste0(uniqueid, date) %in% paste0(cimc$uniqueid, cimc$date),
+    result = case_when(
+      !due ~ "Not due",
+      received ~ "Received",
+      TRUE ~ "Missed"
+    )
+  )
+
+if (nrow(tracking_grid) == 0) {
+  cat("No active participants are available for the recent tracking grid.\n")
+} else {
+  print(
+    ggplot(tracking_grid, aes(date, display_id, fill = result)) +
+      geom_tile(colour = "white", linewidth = .7, width = .92, height = .82) +
+      facet_grid(site ~ ., scales = "free_y", space = "free_y") +
+      scale_fill_manual(values = c(Received = "#59ad8b", Missed = "#e58d87", `Not due` = "#d9dfdf")) +
+      scale_x_date(date_breaks = "1 day", date_labels = "%d", expand = expansion(add = .4)) +
+      labs(x = paste(format(min(tracking_dates), "%b %Y"), "— day of month"), y = NULL, fill = NULL) +
+      theme_minimal(base_size = 11) +
+      theme(
+        legend.position = "top", panel.grid = element_blank(),
+        axis.text.x = element_text(size = 8)
+      )
+  )
+}
+```
+
+</details>
+
+<details class="dashboard-section">
+<summary>Monthly participant tracking — all study months</summary>
+
+**What it shows.** One cell per participant and calendar month since recruitment began, separated by study site. Purple indicates a received monthly section and amber indicates a section that was due but missing.
+
+**How it is calculated.** Monthly due dates use the configured day of month and each participant's observed follow-up interval. Rows with the most missing monthly sections appear first within each site.
+
+```{r}
+#| label: monthly-participant-tracking
+#| fig-height: 16
+#| fig-width: 11
+
+monthly_tracking_summary <- operational_tracking$monthly_summary |>
+  arrange(site, desc(monthly_missed), monthly_completion, uniqueid) |>
+  group_by(site) |>
+  mutate(
+    site_rank = row_number(),
+    display_id = if (publish_action_lists) {
+      uniqueid
+    } else {
+      paste0(as.character(site), " participant ", sprintf("%03d", site_rank))
+    }
+  ) |>
+  ungroup()
+
+monthly_tracking_grid <- operational_tracking$monthly_grid |>
+  left_join(
+    monthly_tracking_summary |> select(uniqueid, display_id),
+    by = "uniqueid"
+  ) |>
+  mutate(display_id = factor(display_id, levels = rev(monthly_tracking_summary$display_id)))
+
+if (nrow(monthly_tracking_grid) == 0) {
+  cat("No enrolled participants are available for monthly tracking.\n")
+} else {
+  print(
+    ggplot(monthly_tracking_grid, aes(month, display_id, fill = result)) +
+      geom_tile(colour = "white", linewidth = .45, width = 25, height = .82) +
+      facet_grid(site ~ ., scales = "free_y", space = "free_y") +
+      scale_fill_manual(
+        values = c(
+          `Monthly received` = "#7763a8",
+          `Monthly missing` = "#e2ac43",
+          `Not yet due` = "#edf1f2",
+          `Not enrolled / not due` = "#d9dfdf",
+          `Follow-up ended` = "#b9c1c3"
+        ),
+        drop = FALSE
+      ) +
+      scale_x_date(date_breaks = "1 month", date_labels = "%b\n%Y", expand = expansion(add = 12)) +
+      labs(x = NULL, y = NULL, fill = NULL) +
+      theme_minimal(base_size = 10) +
+      theme(
+        legend.position = "top", panel.grid = element_blank(),
+        axis.text.y = element_text(size = 7)
+      )
+  )
+}
+```
+
+</details>
+
+<details class="dashboard-section">
+<summary>Daily follow-up queues by site</summary>
+
+```{r}
+#| label: front-follow-up-queue
+#| results: asis
+
+if (nrow(reminder_targets) == 0) {
+  cat("No active participant currently meets the configured consecutive-miss threshold.\n")
+} else if (publish_action_lists) {
+  for (site_name in unname(site_labels)) {
+    site_queue <- reminder_targets |>
+      filter(as.character(site) == site_name) |>
+      slice_head(n = config$monitoring$action_list_preview_rows) |>
+      transmute(
+        `Participant ID` = participant_id,
+        `Reason flagged` = paste(current_consecutive_missed_days, "consecutive missed days"),
+        `Last report` = last_report_date,
+        `Completion` = percent(daily_completion, accuracy = .1)
+      )
+    cat("#### ", site_name, " — ", nrow(site_queue), " participant(s)\n\n", sep = "")
+    cat('<div class="monitor-table-scroll monitor-table-compact">',
+        kable(site_queue, format = "html", align = c("l", "l", "l", "r")),
+        '</div>', sep = "\n")
+  }
+} else {
+  follow_up_summary <- reminder_targets |>
+    count(site, name = "Participants") |>
+    rename(Site = site) |>
+    kable(format = "html", align = c("l", "r"))
+  cat("Participant identifiers are hidden in the rendered production site. The protected reminder CSV contains the operational queue.\n")
+  cat('<div class="monitor-table-scroll monitor-table-compact">', follow_up_summary, '</div>', sep = "\n")
+}
+```
+
+</details>
+
+<details class="dashboard-section">
+<summary>Monthly follow-up queues by site</summary>
+
+```{r}
+#| label: front-monthly-follow-up-queue
+#| results: asis
+
+if (nrow(monthly_due_targets) == 0) {
+  cat("No participant currently has an overdue monthly section under the configured grace period.\n")
+} else if (publish_action_lists) {
+  for (site_name in unname(site_labels)) {
+    site_queue <- monthly_due_targets |>
+      filter(as.character(site) == site_name) |>
+      slice_head(n = config$monitoring$action_list_preview_rows) |>
+      transmute(
+        `Participant ID` = participant_id,
+        `Monthly sections missing` = monthly_reports_missing,
+        `Last monthly due date` = last_monthly_report_due,
+        `Reminder method` = reminder_method
+      )
+    cat("#### ", site_name, " — ", nrow(site_queue), " participant(s)\n\n", sep = "")
+    cat('<div class="monitor-table-scroll monitor-table-compact">',
+        kable(site_queue, format = "html", align = c("l", "r", "l", "l")),
+        '</div>', sep = "\n")
+  }
+} else {
+  monthly_queue_summary <- monthly_due_targets |>
+    count(site, name = "Participants") |>
+    rename(Site = site) |>
+    kable(format = "html", align = c("l", "r"))
+  cat("Participant identifiers are hidden in the rendered production site. The protected monthly reminder CSVs contain the site queues.\n")
+  cat('<div class="monitor-table-scroll monitor-table-compact">', monthly_queue_summary, '</div>', sep = "\n")
+}
+```
+
+</details>
 
 ## Potential protocol deviations and violations
 
@@ -522,147 +1122,89 @@ if (publish_action_lists && nrow(protocol_review) > 0) {
 }
 ```
 
-## Recruitment funnel
+## Data quality and analysis checks
 
-**What it shows.** Unique people at successive stages from screening through daily reporting and completion of the observation window.
+**What it shows.** Automated structural checks for duplicate records, dates before programme start, skip-logic inconsistencies, and contradictory monthly responses. Results are shown for the study overall and for each operational site.
 
-**How it is calculated.** A person appears in every stage they have reached, so this is a cumulative funnel rather than a set of mutually exclusive groups.
-
-**Why it helps.** The largest drop between adjacent stages identifies where recruitment or onboarding may need attention.
+**Why it helps.** Site-specific counts show where a form, training, linkage, or submission-process problem should be investigated without requiring a separate data-quality chapter.
 
 ```{r}
-#| label: recruitment-funnel
-#| fig-height: 4.5
-#| fig-width: 10
+#| label: front-data-quality
+#| results: asis
 
-funnel <- tibble(
-  stage = factor(
-    c("Screened", "Eligible", "Enrolled", "Submitted ≥1 daily form", followup_complete_label),
-    levels = rev(c("Screened", "Eligible", "Enrolled", "Submitted ≥1 daily form", followup_complete_label))
-  ),
-  participants = c(
-    n_screened, n_eligible, n_enrolled,
-    sum(progress$daily_reports_received > 0), n_reached_followup
-  )
+quality_daily <- read_csv(
+  config$files$daily_data,
+  col_types = cols(participant_id = col_character()),
+  show_col_types = FALSE
 ) |>
-  mutate(percent_screened = participants / n_screened)
-
-ggplot(funnel, aes(participants, stage)) +
-  geom_col(fill = "#167c77", width = .66) +
-  geom_text(
-    aes(label = sprintf("%s  (%s)", comma(participants), percent(percent_screened, accuracy = .1))),
-    hjust = -.08, size = 3.7
-  ) +
-  scale_x_continuous(expand = expansion(mult = c(0, .25))) +
-  labs(x = "Participants", y = NULL) +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
-```
-
-## Enrolment against site targets
-
-**What it shows.** Enrolment achieved at each site relative to its configured target.
-
-**How it is calculated.** Enrolled participants are counted once at their enrolment site and divided by that site's target in `dashboard_config.yml`.
-
-**Why it helps.** It distinguishes overall recruitment success from site-specific delivery. It does not measure reporting quality after enrolment.
-
-```{r}
-#| label: site-enrolment-targets
-#| fig-height: 4.2
-#| fig-width: 9
-
-site_progress <- enrolment |>
-  count(organization, site, name = "enrolled") |>
   mutate(
-    target = as.integer(site_targets[organization]),
-    target_completion = enrolled / target
+    participant_id = as.character(participant_id),
+    report_date = as.Date(as.character(report_date)),
+    programme_start_date = as.Date(as.character(programme_start_date))
+  ) |>
+  left_join(
+    enrolment |> transmute(participant_id = uniqueid, site = as.character(site)),
+    by = "participant_id"
   )
 
-ggplot(site_progress, aes(target_completion, site)) +
-  geom_vline(xintercept = 1, colour = "#8c4f7d", linewidth = .7) +
-  geom_col(fill = "#167c77", width = .58) +
-  geom_text(
-    aes(label = sprintf("%s / %s  (%s)", enrolled, target, percent(target_completion, accuracy = 1))),
-    hjust = -.08, size = 3.7
-  ) +
-  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = c(0, .25))) +
-  labs(x = "Enrolment target reached", y = NULL) +
-  theme_minimal(base_size = 12) +
-  theme(panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
-```
+quality_monthly <- read_csv(
+  config$files$monthly_data,
+  col_types = cols(participant_id = col_character()),
+  show_col_types = FALSE
+) |>
+  mutate(participant_id = as.character(participant_id)) |>
+  left_join(
+    enrolment |> transmute(participant_id = uniqueid, site = as.character(site)),
+    by = "participant_id"
+  )
 
-## Participant progress
+quality_by_scope <- bind_rows(
+  op_quality_checks(quality_daily, quality_monthly, config$fields$pain_locations, config) |>
+    mutate(Scope = "All sites"),
+  map_dfr(unname(site_labels), function(site_name) {
+    op_quality_checks(
+      quality_daily |> filter(site == site_name),
+      quality_monthly |> filter(site == site_name),
+      config$fields$pain_locations,
+      config
+    ) |>
+      mutate(Scope = site_name)
+  })
+) |>
+  select(Scope, Check, Issues)
 
-**What it shows.** The current follow-up status of enrolled participants within each site.
+quality_totals <- quality_by_scope |>
+  group_by(Scope) |>
+  summarise(Issues = sum(Issues), .groups = "drop")
 
-**How it is calculated.** Status uses the configured observation window and method-discontinuation responses. “`r followup_complete_label`” means the time window elapsed; it does not require perfect questionnaire completion.
-
-**Why it helps.** It separates participants who remain under active follow-up from those who have completed, stopped, or never begun daily reporting.
-
-```{r}
-#| label: participant-status
-#| fig-height: 4.5
-#| fig-width: 10
-
-status_levels <- c(
-  "Active follow-up", followup_complete_label, "Enrolled — no daily report",
-  "Stopped method / follow-up ended"
+quality_cards <- tags$div(
+  class = "monitor-kpis",
+  lapply(seq_len(nrow(quality_totals)), function(index) {
+    kpi(
+      quality_totals$Scope[[index]],
+      comma(quality_totals$Issues[[index]]),
+      "Automated structural issues"
+    )
+  })
 )
-
-status_by_site <- progress |>
-  count(site, status) |>
-  complete(site, status = status_levels, fill = list(n = 0L)) |>
-  group_by(site) |>
-  mutate(percent = n / sum(n), status = factor(status, levels = status_levels)) |>
-  ungroup()
-
-ggplot(status_by_site, aes(percent, site, fill = status)) +
-  geom_col(width = .62) +
-  geom_text(
-    aes(label = if_else(percent >= .07, paste0(n, "\n", percent(percent, accuracy = 1)), "")),
-    position = position_stack(vjust = .5), size = 3, lineheight = .9
-  ) +
-  scale_x_continuous(labels = percent_format(accuracy = 1), expand = expansion(mult = 0)) +
-  scale_fill_manual(values = c("#167c77", "#8fc5c1", "#d8c8a5", "#8c4f7d")) +
-  labs(x = "Percent of enrolled participants", y = NULL, fill = NULL) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "top", panel.grid.major.y = element_blank(), panel.grid.minor = element_blank())
+cat("```{=html}\n", as.character(quality_cards), "\n```\n", sep = "")
 ```
 
-## Daily reporting over calendar time
-
-**What it shows.** The proportion of expected daily reports actually received in each site-week.
-
-**How it is calculated.** Each point divides received participant-days by expected participant-days among people under observation that week.
-
-**Why it helps.** It separates growth in the enrolled cohort from genuine reporting adherence and makes site-specific implementation changes visible over time.
+<details class="dashboard-section">
+<summary>Detailed data-quality checks by site</summary>
 
 ```{r}
-#| label: weekly-daily-completion
-#| fig-height: 5
-#| fig-width: 10
+#| label: front-data-quality-detail
+#| results: asis
 
-due_calendar <- progress |>
-  select(uniqueid, site, enrollment_date, observation_end_date) |>
-  pmap_dfr(function(uniqueid, site, enrollment_date, observation_end_date) {
-    tibble(uniqueid = uniqueid, site = site, date = seq(enrollment_date, observation_end_date, by = "day"))
-  }) |>
-  mutate(
-    received = paste0(uniqueid, date) %in% paste0(cimc$uniqueid, cimc$date),
-    week = as.Date(cut(date, "week", start.on.monday = TRUE))
-  ) |>
-  group_by(site, week) |>
-  summarise(expected = n(), received = sum(received), completion = received / expected, .groups = "drop")
-
-ggplot(due_calendar, aes(week, completion, colour = site, linetype = site)) +
-  geom_line(linewidth = .8) +
-  geom_point(size = 1.8) +
-  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
-  labs(x = NULL, y = "Daily reports received / expected", colour = NULL, linetype = NULL) +
-  theme_minimal(base_size = 12) +
-  theme(legend.position = "top", panel.grid.minor = element_blank())
+quality_table <- quality_by_scope |>
+  pivot_wider(names_from = Scope, values_from = Issues) |>
+  select(Check, `All sites`, all_of(unname(site_labels))) |>
+  kable(format = "html", align = c("l", rep("r", length(site_labels) + 1L)))
+cat('<div class="monitor-table-scroll monitor-table-compact">', quality_table, '</div>', sep = "\n")
 ```
+
+</details>
 
 ## Completion-pattern UpSet chart
 
@@ -748,7 +1290,17 @@ upset_bars / upset_matrix + plot_layout(heights = c(1.7, 1))
 
 download_card <- function(title, count, file, detail) {
   action <- if (publish_action_lists) {
-    tags$a(href = file, download = file, "Download CSV")
+    tags$div(
+      class = "monitor-download-links",
+      tags$a(href = file, download = file, "Combined"),
+      lapply(names(site_labels), function(site_code) {
+        site_file <- str_replace(file, "\\.csv$", paste0("_", site_code, ".csv"))
+        tags$a(
+          href = site_file, download = site_file,
+          unname(site_labels[[site_code]])
+        )
+      })
+    )
   } else {
     tags$div(
       class = "small text-muted",
@@ -794,33 +1346,47 @@ downloads <- tags$div(
     "Full participant progress", nrow(progress),
     "participant_progress_summary.csv",
     "One operational progress row per enrolled participant"
+  ),
+  download_card(
+    "Ranked participant gap summary", nrow(gap_export),
+    "participant_followup_gap_summary.csv",
+    "Full-protocol daily gaps and monthly completion counts"
   )
 )
 
 cat("```{=html}\n", as.character(downloads), "\n```\n", sep = "")
 ```
 
-### Current consecutive-miss reminder list
+<details class="dashboard-section">
+<summary>Current consecutive-miss reminder lists by site</summary>
 
 ```{r}
 #| label: reminder-target-preview
 #| results: asis
 
-preview_table <- reminder_targets |>
-  slice_head(n = config$monitoring$action_list_preview_rows) |>
-  transmute(
-    `Participant ID` = participant_id,
-    Site = site,
-    `Missed days` = current_consecutive_missed_days,
-    `Last report` = last_report_date,
-    `Reminder method` = reminder_method,
-    Contact = reminder_contact,
-    `Daily completion` = percent(daily_completion, accuracy = .1)
-  ) |>
-  kable(format = "html", align = c("l", "l", "r", "l", "l", "l", "r"))
-
-cat('<div class="monitor-table-scroll">', preview_table, '</div>', sep = "\n")
+if (publish_action_lists) {
+  for (site_name in unname(site_labels)) {
+    preview_table <- reminder_targets |>
+      filter(as.character(site) == site_name) |>
+      slice_head(n = config$monitoring$action_list_preview_rows) |>
+      transmute(
+        `Participant ID` = participant_id,
+        `Missed days` = current_consecutive_missed_days,
+        `Last report` = last_report_date,
+        `Reminder method` = reminder_method,
+        Contact = reminder_contact,
+        `Daily completion` = percent(daily_completion, accuracy = .1)
+      ) |>
+      kable(format = "html", align = c("l", "r", "l", "l", "l", "r"))
+    cat("#### ", site_name, "\n\n", sep = "")
+    cat('<div class="monitor-table-scroll">', preview_table, '</div>', sep = "\n")
+  }
+} else {
+  cat("Participant-level reminder lists are available in the protected combined and site-specific CSV files.\n")
+}
 ```
+
+</details>
 
 ## Monitoring definitions
 

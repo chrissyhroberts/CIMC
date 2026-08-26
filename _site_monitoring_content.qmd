@@ -1,0 +1,411 @@
+```{r}
+#| label: site-monitoring-setup
+
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(knitr)
+library(yaml)
+library(htmltools)
+source("operational_tracking_helpers.R")
+
+config <- read_yaml("dashboard_config.yml")
+site_labels <- unlist(config$labels$sites)
+if (!site_code %in% names(site_labels)) stop("Unknown configured site code: ", site_code)
+site_name <- unname(site_labels[[site_code]])
+site_target <- as.integer(unlist(config$study$site_targets)[[site_code]])
+data_mode <- tolower(config$data_source$mode)
+publish_action_lists <- isTRUE(
+  config$data_source[[data_mode]]$publish_action_lists_in_rendered_site
+)
+refresh_metadata <- read_csv(config$files$refresh_metadata, show_col_types = FALSE)
+data_cutoff <- as.Date(first(refresh_metadata$effective_data_cutoff))
+protocol_days <- as.integer(config$study$expected_daily_reports)
+monthly_due_day <- as.integer(config$study$monthly_due_day)
+missed_days_threshold <- as.integer(config$monitoring$consecutive_missed_days)
+monthly_grace_days <- as.integer(config$monitoring$monthly_report_grace_days)
+row_height <- config$monitoring$full_tracking_row_height_inches
+scroll_height <- config$display$full_tracking_scroll_height
+
+id_type <- cols(uniqueid = col_character())
+recruitment_raw <- read_csv(
+  config$files$recruitment, col_types = id_type, show_col_types = FALSE
+)
+enrolment_raw <- read_csv(
+  config$files$enrolment, col_types = id_type, show_col_types = FALSE
+)
+cimc_raw <- read_csv(
+  config$files$cimc, col_types = id_type, show_col_types = FALSE
+)
+
+canonical_latest <- function(data) {
+  data <- op_ensure_fields(data, c("_id", "uniqueid"))
+  source_order <- seq_len(nrow(data))
+  kobo_order <- suppressWarnings(as.numeric(data[["_id"]]))
+  data |>
+    mutate(
+      uniqueid = as.character(uniqueid),
+      .order = coalesce(kobo_order, as.numeric(source_order))
+    ) |>
+    arrange(uniqueid, desc(.order)) |>
+    distinct(uniqueid, .keep_all = TRUE) |>
+    select(-.order)
+}
+
+recruitment <- canonical_latest(recruitment_raw) |>
+  mutate(site = unname(site_labels[as.character(organization)]))
+enrolment <- canonical_latest(enrolment_raw) |>
+  mutate(
+    enrollment_date = as.Date(as.character(enrollment_date)),
+    site = unname(site_labels[as.character(organization)])
+  )
+cimc <- op_ensure_fields(cimc_raw, c("QA", "QB", "date", "monthly_report_due")) |>
+  mutate(
+    uniqueid = as.character(uniqueid),
+    date = as.Date(as.character(date)),
+    monthly_report_due = str_to_lower(as.character(monthly_report_due)),
+    method_stop_date = as.Date(as.character(QB))
+  )
+
+method_stops <- cimc |>
+  filter(as.character(QA) %in% c("0", "no"), !is.na(method_stop_date)) |>
+  group_by(uniqueid) |>
+  summarise(method_stop_date = min(method_stop_date), .groups = "drop")
+
+tracking <- op_prepare_tracking(
+  enrolment |> left_join(method_stops, by = "uniqueid"),
+  cimc, config, data_cutoff
+)
+site_participants <- tracking$participants |> filter(site == site_name)
+site_daily_grid <- tracking$daily_grid |> filter(site == site_name)
+site_daily_summary <- op_sort_daily(
+  tracking$daily_summary |> filter(site == site_name),
+  config$monitoring$full_tracking_sort
+)
+site_monthly_grid <- tracking$monthly_grid |> filter(site == site_name)
+site_monthly_summary <- tracking$monthly_summary |>
+  filter(site == site_name) |>
+  arrange(desc(monthly_missed), monthly_completion, uniqueid)
+
+current_streaks <- site_daily_grid |>
+  group_by(uniqueid) |>
+  summarise(
+    current_consecutive_missed_days = {
+      values <- daily_missing[due]
+      runs <- rle(rev(values))
+      if (length(runs$values) == 0 || !runs$values[[1]]) 0L else runs$lengths[[1]]
+    },
+    .groups = "drop"
+  )
+
+site_progress <- site_daily_summary |>
+  left_join(site_monthly_summary, by = c("uniqueid", "organization", "site"), suffix = c("", "_monthly")) |>
+  left_join(current_streaks, by = "uniqueid") |>
+  mutate(
+    status = case_when(
+      !is.na(method_stop_date) & method_stop_date <= data_cutoff ~ "Follow-up ended early",
+      planned_end_date <= data_cutoff ~ "Protocol window reached",
+      TRUE ~ "Active follow-up"
+    )
+  )
+
+daily_queue <- site_progress |>
+  filter(
+    status == "Active follow-up",
+    current_consecutive_missed_days >= missed_days_threshold
+  ) |>
+  arrange(desc(current_consecutive_missed_days), daily_completion, uniqueid)
+
+monthly_queue <- site_monthly_grid |>
+  filter(
+    missing,
+    as.integer(data_cutoff - due_date) >= monthly_grace_days
+  ) |>
+  distinct(uniqueid, due_date) |>
+  count(uniqueid, name = "monthly_sections_missing") |>
+  left_join(site_monthly_summary, by = "uniqueid") |>
+  arrange(desc(monthly_sections_missing), uniqueid)
+
+n_screened <- sum(recruitment$site == site_name, na.rm = TRUE)
+n_eligible <- sum(
+  recruitment$site == site_name & recruitment$eligibility_status == "eligible",
+  na.rm = TRUE
+)
+n_enrolled <- nrow(site_participants)
+n_active <- sum(site_progress$status == "Active follow-up")
+site_daily_due <- sum(site_daily_summary$observed_days)
+site_daily_received <- sum(site_daily_summary$daily_received)
+site_monthly_due <- sum(site_monthly_summary$monthly_due)
+site_monthly_received <- sum(site_monthly_summary$monthly_received)
+site_daily_completion_value <- if (site_daily_due > 0) {
+  percent(site_daily_received / site_daily_due, accuracy = .1)
+} else {
+  "Not yet available"
+}
+site_monthly_completion_value <- if (site_monthly_due > 0) {
+  percent(site_monthly_received / site_monthly_due, accuracy = .1)
+} else {
+  "Not yet due"
+}
+
+kpi <- function(label, value, note) {
+  tags$div(
+    class = "monitor-kpi",
+    tags$div(class = "monitor-kpi-label", label),
+    tags$div(class = "monitor-kpi-value", value),
+    tags$div(class = "monitor-kpi-note", note)
+  )
+}
+
+daily_display_summary <- site_daily_summary |>
+  mutate(
+    rank = row_number(),
+    display_id = if (publish_action_lists) uniqueid else paste0("Participant ", sprintf("%03d", rank)),
+    display_label = paste0(display_id, " · ", gap_episodes, " gaps / ", missed_days, " missed")
+  )
+daily_display_grid <- site_daily_grid |>
+  left_join(daily_display_summary |> select(uniqueid, display_label), by = "uniqueid") |>
+  mutate(display_label = factor(display_label, levels = rev(daily_display_summary$display_label)))
+
+monthly_display_summary <- site_monthly_summary |>
+  mutate(
+    rank = row_number(),
+    display_id = if (publish_action_lists) uniqueid else paste0("Participant ", sprintf("%03d", rank)),
+    display_label = paste0(display_id, " · ", monthly_missed, " monthly missed")
+  )
+monthly_display_grid <- site_monthly_grid |>
+  left_join(monthly_display_summary |> select(uniqueid, display_label), by = "uniqueid") |>
+  mutate(display_label = factor(display_label, levels = rev(monthly_display_summary$display_label)))
+
+daily_plot_height <- max(6, nrow(daily_display_summary) * row_height)
+monthly_plot_height <- max(6, nrow(monthly_display_summary) * row_height)
+```
+
+Data are current through `r format(data_cutoff, "%d %B %Y")`. This page is restricted to `r site_name` and uses the same study-wide configuration, denominators, and alert rules as the central dashboard.
+
+**What it does.** It brings recruitment, daily and monthly completion, individual reporting patterns, follow-up queues, downloads, and data-quality checks into one operational site view.
+
+**Why it helps.** Site teams can identify and manage their own follow-up problems without filtering the central dashboard or receiving records belonging to another site.
+
+```{r}
+#| label: site-kpis
+#| results: asis
+
+site_cards <- tags$div(
+  class = "monitor-kpis",
+  kpi("Screened", comma(n_screened), paste(comma(n_eligible), "eligible")),
+  kpi("Enrolled", comma(n_enrolled), paste0(percent(n_enrolled / site_target, accuracy = .1), " of target")),
+  kpi("Active follow-up", comma(n_active), paste("of", n_enrolled, "enrolled")),
+  kpi("Daily completion", site_daily_completion_value,
+      paste(comma(site_daily_received), "of", comma(site_daily_due))),
+  kpi("Monthly completion", site_monthly_completion_value,
+      paste(comma(site_monthly_received), "of", comma(site_monthly_due))),
+  kpi("Daily queue", comma(nrow(daily_queue)), paste0("≥", missed_days_threshold, " consecutive days")),
+  kpi("Monthly queue", comma(nrow(monthly_queue)), "Overdue monthly sections")
+)
+cat("```{=html}\n", as.character(site_cards), "\n```\n", sep = "")
+```
+
+<details class="dashboard-section">
+<summary>Daily completion heatmap — full protocol period</summary>
+
+Rows are ordered by the configured missing-gap measure. Protocol day 1 is the participant's enrolment date.
+
+```{r}
+#| label: site-daily-scroll-open
+#| results: asis
+cat('```{=html}\n<div class="full-tracking-scroll" style="--full-tracking-height: ',
+    scroll_height, ';">\n```\n', sep = "")
+```
+
+```{r site-daily-heatmap, fig.height=daily_plot_height, fig.width=14}
+if (nrow(daily_display_grid) == 0) {
+  plot.new(); text(.5, .5, "No enrolled participants are available.")
+} else {
+  ggplot(daily_display_grid, aes(follow_up_day, display_label, fill = result)) +
+    geom_tile(colour = "white", linewidth = .15, width = .96, height = .86) +
+    geom_vline(
+      xintercept = seq(config$study$programme_period_days, protocol_days - 1L,
+                       by = config$study$programme_period_days) + .5,
+      colour = "#344b56", linewidth = .35
+    ) +
+    scale_fill_manual(
+      values = c(
+        `Daily received` = "#59ad8b", `Daily missed` = "#e58d87",
+        `Monthly + daily received` = "#7763a8", `Monthly due — missing` = "#e2ac43",
+        `Future / not yet due` = "#edf1f2", `Follow-up ended` = "#b9c1c3"
+      ), drop = FALSE
+    ) +
+    scale_x_continuous(
+      breaks = unique(c(1, seq(10, protocol_days, 10), protocol_days)),
+      expand = expansion(add = .2)
+    ) +
+    labs(x = "Protocol follow-up day", y = NULL, fill = NULL) +
+    theme_minimal(base_size = 10) +
+    theme(legend.position = "top", panel.grid = element_blank(), axis.text.y = element_text(size = 7.5))
+}
+```
+
+```{=html}
+</div>
+```
+
+</details>
+
+<details class="dashboard-section">
+<summary>Monthly completion heatmap — all study months</summary>
+
+Rows are ordered by overdue monthly sections. Columns use calendar months since recruitment began.
+
+```{r site-monthly-heatmap, fig.height=monthly_plot_height, fig.width=11}
+if (nrow(monthly_display_grid) == 0) {
+  plot.new(); text(.5, .5, "No enrolled participants are available.")
+} else {
+  ggplot(monthly_display_grid, aes(month, display_label, fill = result)) +
+    geom_tile(colour = "white", linewidth = .45, width = 25, height = .86) +
+    scale_fill_manual(
+      values = c(
+        `Monthly received` = "#7763a8", `Monthly missing` = "#e2ac43",
+        `Not yet due` = "#edf1f2", `Not enrolled / not due` = "#d9dfdf",
+        `Follow-up ended` = "#b9c1c3"
+      ), drop = FALSE
+    ) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b\n%Y", expand = expansion(add = 12)) +
+    labs(x = NULL, y = NULL, fill = NULL) +
+    theme_minimal(base_size = 10) +
+    theme(legend.position = "top", panel.grid = element_blank(), axis.text.y = element_text(size = 7.5))
+}
+```
+
+</details>
+
+<details class="dashboard-section">
+<summary>Daily follow-up queue</summary>
+
+This is a current-action queue: it counts backwards from each active participant's latest due day, and a subsequent submission resets the streak. Historical gaps remain visible in the heatmap but do not stay in this queue after reporting resumes.
+
+```{r}
+#| label: site-daily-queue
+#| results: asis
+
+if (!publish_action_lists) {
+  cat("Participant details are held in the protected site CSV and are not published in this rendered site.\n")
+} else if (nrow(daily_queue) == 0) {
+  cat("No active participant currently meets the consecutive-miss threshold.\n")
+} else {
+  daily_queue_table <- daily_queue |>
+    transmute(
+      `Participant ID` = uniqueid,
+      `Consecutive missed days` = current_consecutive_missed_days,
+      `Daily completion` = percent(daily_completion, accuracy = .1)
+    ) |>
+    kable(format = "html", align = c("l", "r", "r"))
+  cat('<div class="monitor-table-scroll monitor-table-compact">', daily_queue_table, '</div>', sep = "\n")
+}
+```
+
+</details>
+
+<details class="dashboard-section">
+<summary>Monthly follow-up queue</summary>
+
+```{r}
+#| label: site-monthly-queue
+#| results: asis
+
+if (!publish_action_lists) {
+  cat("Participant details are held in the protected site CSV and are not published in this rendered site.\n")
+} else if (nrow(monthly_queue) == 0) {
+  cat("No participant currently has an overdue monthly section.\n")
+} else {
+  monthly_queue_table <- monthly_queue |>
+    transmute(
+      `Participant ID` = uniqueid,
+      `Monthly sections missing` = monthly_sections_missing,
+      `Monthly completion` = percent(monthly_completion, accuracy = .1)
+    ) |>
+    kable(format = "html", align = c("l", "r", "r"))
+  cat('<div class="monitor-table-scroll monitor-table-compact">', monthly_queue_table, '</div>', sep = "\n")
+}
+```
+
+</details>
+
+## Site action files
+
+```{r}
+#| label: site-action-files
+#| results: asis
+
+site_file <- function(base) str_replace(base, "\\.csv$", paste0("_", site_code, ".csv"))
+site_download <- function(title, base, detail) {
+  file <- site_file(base)
+  tags$div(
+    class = "monitor-download",
+    tags$strong(title),
+    tags$div(class = "small text-muted", detail),
+    if (publish_action_lists) tags$a(href = file, download = file, site_name) else
+      tags$div(class = "small text-muted", "Generated locally; publication disabled.")
+  )
+}
+
+site_downloads <- tags$div(
+  class = "monitor-downloads",
+  site_download("Consecutive missed daily reports", "reminder_targets_3_consecutive_missed_days.csv", "Current daily reminder targets"),
+  site_download("Overdue monthly sections", "monthly_report_due_targets.csv", "Current monthly reminder targets"),
+  site_download("Eligible but not enrolled", "eligible_not_enrolled_targets.csv", "Recruitment follow-up"),
+  site_download("Enrolled with no daily report", "enrolled_no_daily_submission_targets.csv", "Onboarding follow-up"),
+  site_download("Protocol review", "protocol_deviation_violation_review.csv", "Potential deviations and violations"),
+  site_download("Participant progress", "participant_progress_summary.csv", "All enrolled participants at this site"),
+  site_download("Ranked gap summary", "participant_followup_gap_summary.csv", "Full-protocol completion patterns")
+)
+cat("```{=html}\n", as.character(site_downloads), "\n```\n", sep = "")
+```
+
+## Data quality and analysis checks
+
+**What it shows.** Structural daily and monthly checks restricted to `r site_name`, using the same definitions as the study-wide table.
+
+**Why it helps.** The site team can investigate its own duplicate, date, skip-logic, and contradictory-response issues directly.
+
+```{r}
+#| label: site-data-quality
+#| results: asis
+
+site_ids <- site_participants$uniqueid
+quality_daily <- read_csv(
+  config$files$daily_data,
+  col_types = cols(participant_id = col_character()), show_col_types = FALSE
+) |>
+  mutate(
+    participant_id = as.character(participant_id),
+    report_date = as.Date(as.character(report_date)),
+    programme_start_date = as.Date(as.character(programme_start_date))
+  ) |>
+  filter(participant_id %in% site_ids)
+quality_monthly <- read_csv(
+  config$files$monthly_data,
+  col_types = cols(participant_id = col_character()), show_col_types = FALSE
+) |>
+  mutate(participant_id = as.character(participant_id)) |>
+  filter(participant_id %in% site_ids)
+
+site_quality <- op_quality_checks(
+  quality_daily, quality_monthly, config$fields$pain_locations, config
+)
+quality_cards <- tags$div(
+  class = "monitor-kpis",
+  kpi("Checks with issues", sum(site_quality$Issues > 0), "Of the automated checks"),
+  kpi("Flagged records", sum(site_quality$Issues), "Review rather than automatic exclusion"),
+  kpi("Checks clear", sum(site_quality$Issues == 0), "No issue detected")
+)
+cat("```{=html}\n", as.character(quality_cards), "\n```\n", sep = "")
+
+quality_table <- site_quality |>
+  kable(format = "html", align = c("l", "r"))
+cat('<div class="monitor-table-scroll monitor-table-compact">', quality_table, '</div>', sep = "\n")
+```

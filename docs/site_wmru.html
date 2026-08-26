@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>5&nbsp; Data quality and analysis checks – CIMC study monitoring dashboard</title>
+<title>3&nbsp; Wits MRU monitoring – CIMC study monitoring dashboard</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -30,8 +30,8 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./technical_appendix.html" rel="next">
-<link href="./monthly_epro_analysis.html" rel="prev">
+<link href="./site_profamilia.html" rel="next">
+<link href="./study_statistics.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
@@ -84,7 +84,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./data_quality.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data quality and analysis checks</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./site_wmru.html"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Wits MRU monitoring</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -123,26 +123,38 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./site_wmru.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Wits MRU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_profamilia.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Profamilia monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_ohsu.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">OHSU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./menstrual_epro_daily_monthly_analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./monthly_epro_analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./data_quality.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data quality and analysis checks</span></span></a>
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./technical_appendix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
   </div>
 </li>
     </ul>
@@ -155,8 +167,8 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul class="collapse">
-  <li><a href="#data-quality-checks" id="toc-data-quality-checks" class="nav-link active" data-scroll-target="#data-quality-checks"><span class="header-section-number">5.1</span> Data-quality checks</a></li>
-  <li><a href="#analysis-notes" id="toc-analysis-notes" class="nav-link" data-scroll-target="#analysis-notes"><span class="header-section-number">5.2</span> Analysis notes</a></li>
+  <li><a href="#site-action-files" id="toc-site-action-files" class="nav-link active" data-scroll-target="#site-action-files"><span class="header-section-number">3.1</span> Site action files</a></li>
+  <li><a href="#data-quality-and-analysis-checks" id="toc-data-quality-and-analysis-checks" class="nav-link" data-scroll-target="#data-quality-and-analysis-checks"><span class="header-section-number">3.2</span> Data quality and analysis checks</a></li>
   </ul>
 </nav>
     </div>
@@ -165,8 +177,8 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data quality and analysis checks</span></h1>
-<p class="subtitle lead">Structural checks, inference flags, and interpretation notes</p>
+<h1 class="title"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Wits MRU monitoring</span></h1>
+<p class="subtitle lead">Recruitment, follow-up, action queues, and data quality</p>
 </div>
 
 
@@ -183,233 +195,542 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<style>
-.bodymap-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: .8rem;
-  margin: 0 0 1rem;
-}
-
-.bodymap-stat {
-  padding: .85rem 1rem;
-  border: 1px solid var(--bs-border-color);
-  border-radius: .7rem;
-  background: var(--bs-tertiary-bg);
-}
-
-.bodymap-stat-label {
-  color: var(--bs-secondary-color);
-  font-size: .85rem;
-  margin-bottom: .15rem;
-}
-
-.bodymap-stat-value {
-  font-size: 1.4rem;
-  font-weight: 500;
-}
-
-.bodymap-frame {
-  position: relative;
-  width: 100%;
-  max-width: 1180px;
-  margin: 0 auto;
-}
-
-.bodymap-frame svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 78vh;
-}
-
-.bodymap-region {
-  transition: filter 120ms ease, stroke-width 120ms ease;
-}
-
-.bodymap-region:hover {
-  filter: brightness(.9) saturate(1.08);
-  stroke: #173f40 !important;
-  stroke-width: 1.5px !important;
-}
-
-.bodymap-region:focus {
-  outline: none;
-  filter: brightness(.9) saturate(1.08);
-  stroke: #173f40 !important;
-  stroke-width: 2px !important;
-}
-
-.bodymap-hover {
-  display: none;
-  position: absolute;
-  pointer-events: none;
-  z-index: 10;
-  opacity: 0;
-}
-
-.bodymap-hover.is-visible {
-  display: block;
-  opacity: 1;
-}
-
-.bodymap-legend {
-  max-width: 560px;
-  margin: .8rem auto 1.5rem;
-}
-
-.bodymap-gradient {
-  height: .8rem;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #f1f6f5, #b8ddda, #61b9b2, #167c77, #064743);
-}
-
-.bodymap-legend-labels {
-  display: flex;
-  justify-content: space-between;
-  color: var(--bs-secondary-color);
-  font-size: .82rem;
-  margin-top: .25rem;
-}
-
-.bodymap-note {
-  color: var(--bs-secondary-color);
-  text-align: center;
-  margin: .35rem 0 1rem;
-}
-
-.bodymap-warning {
-  border-left: 4px solid #c97a15;
-  background: var(--bs-warning-bg-subtle);
-  padding: .75rem 1rem;
-  margin: 1rem 0;
-}
-
-.bodymap-table-scroll {
-  max-height: 24rem;
-  overflow-y: auto;
-  border-top: 1px solid var(--bs-border-color);
-  border-bottom: 1px solid var(--bs-border-color);
-}
-
-.bodymap-table-scroll table {
-  margin-bottom: 0;
-}
-
-.bodymap-table-scroll thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: var(--bs-body-bg);
-}
-</style>
-<p>This page brings together checks that affect whether the monitoring and symptom results can be interpreted safely.</p>
-<p><strong>What.</strong> It counts duplicate records, skip-logic inconsistencies, unmatched body-map codes, and implausible or review-worthy inferred-cycle results.</p>
-<p><strong>How.</strong> Each check is recalculated from the same configured inputs and cycle rules used on the analysis pages. A zero means that specific issue was not detected; it does not prove that the underlying data are error-free.</p>
-<p><strong>Why.</strong> These checks help the study team separate a genuine symptom pattern from a form, linkage, missingness, or cycle-inference problem before drawing conclusions.</p>
-<section id="data-quality-checks" class="level2" data-number="5.1">
-<h2 data-number="5.1" class="anchored" data-anchor-id="data-quality-checks"><span class="header-section-number">5.1</span> Data-quality checks</h2>
-<p>These checks identify structural problems that could invalidate interpretation—for example, duplicate records, skip-logic violations, unmatched SVG codes, or impossible cycle lengths. A zero means the specific issue was not found. Long inferred cycles are shown as review flags rather than errors because they may be genuine or may reflect an unobserved intervening onset.</p>
+<p>Data are current through 24 August 2026. This page is restricted to Wits MRU and uses the same study-wide configuration, denominators, and alert rules as the central dashboard.</p>
+<p><strong>What it does.</strong> It brings recruitment, daily and monthly completion, individual reporting patterns, follow-up queues, downloads, and data-quality checks into one operational site view.</p>
+<p><strong>Why it helps.</strong> Site teams can identify and manage their own follow-up problems without filtering the central dashboard or receiving records belonging to another site.</p>
+<div class="monitor-kpis">
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Screened</div>
+    <div class="monitor-kpi-value">59</div>
+    <div class="monitor-kpi-note">58 eligible</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Enrolled</div>
+    <div class="monitor-kpi-value">48</div>
+    <div class="monitor-kpi-note">96.0% of target</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Active follow-up</div>
+    <div class="monitor-kpi-value">45</div>
+    <div class="monitor-kpi-note">of 48 enrolled</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Daily completion</div>
+    <div class="monitor-kpi-value">74.0%</div>
+    <div class="monitor-kpi-note">1,443 of 1,950</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Monthly completion</div>
+    <div class="monitor-kpi-value">92.5%</div>
+    <div class="monitor-kpi-note">49 of 53</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Daily queue</div>
+    <div class="monitor-kpi-value">10</div>
+    <div class="monitor-kpi-note">≥3 consecutive days</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Monthly queue</div>
+    <div class="monitor-kpi-value">3</div>
+    <div class="monitor-kpi-note">Overdue monthly sections</div>
+  </div>
+</div>
+<details class="dashboard-section">
+<summary>
+Daily completion heatmap — full protocol period
+</summary>
+<p>Rows are ordered by the configured missing-gap measure. Protocol day 1 is the participant’s enrolment date.</p>
+<div class="full-tracking-scroll" style="--full-tracking-height: 72vh;">
 <div class="cell">
 <div class="cell-output-display">
-<table class="caption-top table table-sm table-striped small">
-<colgroup>
-<col style="width: 90%">
-<col style="width: 9%">
-</colgroup>
+<div>
+<figure class="figure">
+<p><img src="site_wmru_files/figure-html/site-daily-heatmap-1.png" class="img-fluid figure-img" width="1344"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</details>
+<details class="dashboard-section">
+<summary>
+Monthly completion heatmap — all study months
+</summary>
+<p>Rows are ordered by overdue monthly sections. Columns use calendar months since recruitment began.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="site_wmru_files/figure-html/site-monthly-heatmap-1.png" class="img-fluid figure-img" width="1056"></p>
+</figure>
+</div>
+</div>
+</div>
+</details>
+<details class="dashboard-section">
+<summary>
+Daily follow-up queue
+</summary>
+<p>This is a current-action queue: it counts backwards from each active participant’s latest due day, and a subsequent submission resets the streak. Historical gaps remain visible in the heatmap but do not stay in this queue after reporting resumes.</p>
+<div class="monitor-table-scroll monitor-table-compact">
+<table>
 <thead>
-<tr class="header">
-<th style="text-align: left;">Check</th>
-<th style="text-align: right;">Issues</th>
+<tr>
+<th style="text-align:left;">
+Participant ID
+</th>
+<th style="text-align:right;">
+Consecutive missed days
+</th>
+<th style="text-align:right;">
+Daily completion
+</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
-<td style="text-align: left;">Daily: duplicate participant-date records</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0125
+</td>
+<td style="text-align:right;">
+48
+</td>
+<td style="text-align:right;">
+34.1%
+</td>
 </tr>
-<tr class="even">
-<td style="text-align: left;">Daily: report dated before programme start</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0068
+</td>
+<td style="text-align:right;">
+47
+</td>
+<td style="text-align:right;">
+0.0%
+</td>
 </tr>
-<tr class="odd">
-<td style="text-align: left;">Daily: bleeding follow-up outside bleeding skip condition</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0080
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+59.1%
+</td>
 </tr>
-<tr class="even">
-<td style="text-align: left;">Daily: pain follow-up outside pain skip condition</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0145
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+25.0%
+</td>
 </tr>
-<tr class="odd">
-<td style="text-align: left;">Monthly: duplicate participant-month records</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0058
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+73.1%
+</td>
 </tr>
-<tr class="even">
-<td style="text-align: left;">Monthly: bleeding follow-up outside bleeding skip condition</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0005
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+75.4%
+</td>
 </tr>
-<tr class="odd">
-<td style="text-align: left;">Monthly: clot comparison outside clot skip condition</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0092
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+76.0%
+</td>
 </tr>
-<tr class="even">
-<td style="text-align: left;">Monthly: pain comparison outside pain skip condition</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0115
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+82.9%
+</td>
 </tr>
-<tr class="odd">
-<td style="text-align: left;">Monthly: more than two bleeding products/materials</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0086
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+83.3%
+</td>
 </tr>
-<tr class="even">
-<td style="text-align: left;">Monthly: ‘no product’ selected with another option</td>
-<td style="text-align: right;">4</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Unmatched symmetric body-map response codes</td>
-<td style="text-align: right;">0</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Unmatched detailed body-map response codes</td>
-<td style="text-align: right;">0</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Inferred completed cycle length is zero or negative</td>
-<td style="text-align: right;">0</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Inferred completed cycle shorter than configured onset interval</td>
-<td style="text-align: right;">0</td>
-</tr>
-<tr class="odd">
-<td style="text-align: left;">Completed inferred cycles above review threshold (not excluded)</td>
-<td style="text-align: right;">0</td>
-</tr>
-<tr class="even">
-<td style="text-align: left;">Daily record assigned to more than one inferred cycle</td>
-<td style="text-align: right;">0</td>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0111
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+90.2%
+</td>
 </tr>
 </tbody>
 </table>
 </div>
+</details>
+<details class="dashboard-section">
+<summary>
+Monthly follow-up queue
+</summary>
+<div class="monitor-table-scroll monitor-table-compact">
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+Participant ID
+</th>
+<th style="text-align:right;">
+Monthly sections missing
+</th>
+<th style="text-align:right;">
+Monthly completion
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0253
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+33.3%
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0068
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+0.0%
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01-CIMC-0125
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+66.7%
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</details>
+<section id="site-action-files" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="site-action-files"><span class="header-section-number">3.1</span> Site action files</h2>
+<div class="monitor-downloads">
+  <div class="monitor-download">
+    <strong>Consecutive missed daily reports</strong>
+    <div class="small text-muted">Current daily reminder targets</div>
+    <a href="reminder_targets_3_consecutive_missed_days_wmru.csv" download="reminder_targets_3_consecutive_missed_days_wmru.csv">Wits MRU</a>
+  </div>
+  <div class="monitor-download">
+    <strong>Overdue monthly sections</strong>
+    <div class="small text-muted">Current monthly reminder targets</div>
+    <a href="monthly_report_due_targets_wmru.csv" download="monthly_report_due_targets_wmru.csv">Wits MRU</a>
+  </div>
+  <div class="monitor-download">
+    <strong>Eligible but not enrolled</strong>
+    <div class="small text-muted">Recruitment follow-up</div>
+    <a href="eligible_not_enrolled_targets_wmru.csv" download="eligible_not_enrolled_targets_wmru.csv">Wits MRU</a>
+  </div>
+  <div class="monitor-download">
+    <strong>Enrolled with no daily report</strong>
+    <div class="small text-muted">Onboarding follow-up</div>
+    <a href="enrolled_no_daily_submission_targets_wmru.csv" download="enrolled_no_daily_submission_targets_wmru.csv">Wits MRU</a>
+  </div>
+  <div class="monitor-download">
+    <strong>Protocol review</strong>
+    <div class="small text-muted">Potential deviations and violations</div>
+    <a href="protocol_deviation_violation_review_wmru.csv" download="protocol_deviation_violation_review_wmru.csv">Wits MRU</a>
+  </div>
+  <div class="monitor-download">
+    <strong>Participant progress</strong>
+    <div class="small text-muted">All enrolled participants at this site</div>
+    <a href="participant_progress_summary_wmru.csv" download="participant_progress_summary_wmru.csv">Wits MRU</a>
+  </div>
+  <div class="monitor-download">
+    <strong>Ranked gap summary</strong>
+    <div class="small text-muted">Full-protocol completion patterns</div>
+    <a href="participant_followup_gap_summary_wmru.csv" download="participant_followup_gap_summary_wmru.csv">Wits MRU</a>
+  </div>
 </div>
 </section>
-<section id="analysis-notes" class="level2" data-number="5.2">
-<h2 data-number="5.2" class="anchored" data-anchor-id="analysis-notes"><span class="header-section-number">5.2</span> Analysis notes</h2>
-<ul>
-<li>Daily rows are repeated submissions. Daily symptom percentages use daily submissions as their denominator.</li>
-<li>Both body maps use pain-positive daily submissions and all unique participants as the denominator. Each person contributes at most once per detailed or symmetric region across the observation period.</li>
-<li>Programme cycles are numbered separately for each participant from the first qualifying CD1 after programme start. Completed cycle lengths remain in days and are not normalised to 28 days.</li>
-<li>Cycle-specific prevalence counts each participant once per region and programme cycle. The timing heatmap counts each participant once per region, programme cycle, and cycle day; its cell denominator is participants with a report for that cycle and day.</li>
-<li>Monthly rows are participant-months. Monthly conditional questions use only rows for which the XLSForm makes the question relevant.</li>
-<li>Daily–monthly comparisons require a stable participant ID and a correctly aligned calendar month.</li>
-<li>This is descriptive analysis. It does not test causal relationships or make clinical interpretations.</li>
-<li>The dummy-data pain distribution is intentionally pelvic, abdominal, lumbosacral, breast, and head weighted for testing; it is illustrative and is not a clinical prevalence estimate.</li>
-</ul>
+<section id="data-quality-and-analysis-checks" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="data-quality-and-analysis-checks"><span class="header-section-number">3.2</span> Data quality and analysis checks</h2>
+<p><strong>What it shows.</strong> Structural daily and monthly checks restricted to Wits MRU, using the same definitions as the study-wide table.</p>
+<p><strong>Why it helps.</strong> The site team can investigate its own duplicate, date, skip-logic, and contradictory-response issues directly.</p>
+<div class="monitor-kpis">
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Checks with issues</div>
+    <div class="monitor-kpi-value">2</div>
+    <div class="monitor-kpi-note">Of the automated checks</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Flagged records</div>
+    <div class="monitor-kpi-value">25</div>
+    <div class="monitor-kpi-note">Review rather than automatic exclusion</div>
+  </div>
+  <div class="monitor-kpi">
+    <div class="monitor-kpi-label">Checks clear</div>
+    <div class="monitor-kpi-value">13</div>
+    <div class="monitor-kpi-note">No issue detected</div>
+  </div>
+</div>
+<div class="monitor-table-scroll monitor-table-compact">
+<table>
+<thead>
+<tr>
+<th style="text-align:left;">
+Check
+</th>
+<th style="text-align:right;">
+Issues
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Daily: duplicate participant-date records
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Daily: report before programme start
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Daily: bleeding follow-up outside skip condition
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Daily: pain follow-up outside skip condition
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Monthly: duplicate participant-month records
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Monthly: bleeding follow-up outside skip condition
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Monthly: clot comparison outside skip condition
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Monthly: pain comparison outside skip condition
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Monthly: more than two products/materials
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Monthly: no product selected with another option
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Cycle inference: qualifying bleeding day lacks required next-day observation
+</td>
+<td style="text-align:right;">
+23
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Cycle inference: completed cycle length is zero or negative
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Cycle inference: completed cycle shorter than configured onset interval
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Cycle inference: completed cycle above review threshold
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Body map: unmatched detailed response codes
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+</tbody>
+</table>
+</div>
 
 
 </section>
 
 </main> <!-- /main -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const startsExplanation = (element) => {
+    if (!element || element.tagName !== "P") return false;
+    const lead = element.querySelector(":scope > strong:first-child");
+    return lead && /^(What|How|Why)(\s|\.|$)/i.test(lead.textContent.trim());
+  };
+
+  document.querySelectorAll("main.content").forEach((main) => {
+    const paragraphs = Array.from(main.querySelectorAll("p"));
+    paragraphs.forEach((first) => {
+      if (
+        !first.isConnected ||
+        first.closest(".dashboard-explainer") ||
+        !startsExplanation(first)
+      ) return;
+
+      const group = [first];
+      let next = first.nextElementSibling;
+      while (startsExplanation(next)) {
+        group.push(next);
+        next = next.nextElementSibling;
+      }
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+      first.before(details);
+      group.forEach((paragraph) => details.appendChild(paragraph));
+    });
+
+    // Give every rendered content section the same optional explanation panel.
+    // Existing What/How/Why text is retained; chart-only sections receive a
+    // short fallback so the dashboard remains visually concise and consistent.
+    main.querySelectorAll("section.level2, section.level3, section.level4").forEach((section) => {
+      const directChildren = Array.from(section.children);
+      if (directChildren.some((child) => child.matches("details.dashboard-explainer"))) return;
+
+      const heading = directChildren.find((child) => /^H[2-4]$/.test(child.tagName));
+      if (!heading) return;
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+
+      let next = heading.nextElementSibling;
+      const openingParagraphs = [];
+      while (next && next.tagName === "P" && !next.closest("details")) {
+        openingParagraphs.push(next);
+        next = next.nextElementSibling;
+      }
+
+      if (openingParagraphs.length > 0) {
+        openingParagraphs.forEach((paragraph) => details.appendChild(paragraph));
+      } else {
+        const description = document.createElement("p");
+        const title = heading.textContent.trim().replace(/\s+/g, " ");
+        description.textContent = `This section summarises ${title.toLowerCase()} using the currently available study data and configured monitoring rules.`;
+        details.appendChild(description);
+      }
+
+      heading.insertAdjacentElement("afterend", details);
+    });
+  });
+});
+</script>
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -812,13 +1133,13 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation column-body">
   <div class="nav-page nav-page-previous">
-      <a href="./monthly_epro_analysis.html" class="pagination-link" aria-label="Monthly bleeding and pain">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span>
+      <a href="./study_statistics.html" class="pagination-link" aria-label="Study profile and demographics">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Study profile and demographics</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./technical_appendix.html" class="pagination-link" aria-label="Technical appendix">
-        <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Technical appendix</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./site_profamilia.html" class="pagination-link" aria-label="Profamilia monitoring">
+        <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Profamilia monitoring</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

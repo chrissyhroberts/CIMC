@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>3&nbsp; Daily bleeding and pain – CIMC study monitoring dashboard</title>
+<title>6&nbsp; Daily bleeding and pain – CIMC study monitoring dashboard</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -31,7 +31,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
 <link href="./monthly_epro_analysis.html" rel="next">
-<link href="./study_statistics.html" rel="prev">
+<link href="./site_ohsu.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
@@ -84,7 +84,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./menstrual_epro_daily_monthly_analysis.html"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./menstrual_epro_daily_monthly_analysis.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -123,26 +123,38 @@ ul.task-list li input[type="checkbox"] {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./site_wmru.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Wits MRU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_profamilia.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Profamilia monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_ohsu.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">OHSU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./menstrual_epro_daily_monthly_analysis.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./monthly_epro_analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./data_quality.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data quality and analysis checks</span></span></a>
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./technical_appendix.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
   </div>
 </li>
     </ul>
@@ -155,18 +167,18 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul class="collapse">
-  <li><a href="#how-to-read-this-report" id="toc-how-to-read-this-report" class="nav-link active" data-scroll-target="#how-to-read-this-report"><span class="header-section-number">3.1</span> How to read this report</a></li>
-  <li><a href="#overview" id="toc-overview" class="nav-link" data-scroll-target="#overview"><span class="header-section-number">3.2</span> Overview</a></li>
-  <li><a href="#daily-questionnaire-overview" id="toc-daily-questionnaire-overview" class="nav-link" data-scroll-target="#daily-questionnaire-overview"><span class="header-section-number">3.3</span> Daily questionnaire overview</a></li>
-  <li><a href="#daily-symptom-trend" id="toc-daily-symptom-trend" class="nav-link" data-scroll-target="#daily-symptom-trend"><span class="header-section-number">3.4</span> Daily symptom trend</a></li>
-  <li><a href="#daily-menstrual-bleeding" id="toc-daily-menstrual-bleeding" class="nav-link" data-scroll-target="#daily-menstrual-bleeding"><span class="header-section-number">3.5</span> Daily menstrual bleeding</a></li>
-  <li><a href="#daily-menstrual-pain" id="toc-daily-menstrual-pain" class="nav-link" data-scroll-target="#daily-menstrual-pain"><span class="header-section-number">3.6</span> Daily menstrual pain</a></li>
-  <li><a href="#daily-bleeding-and-pain-together" id="toc-daily-bleeding-and-pain-together" class="nav-link" data-scroll-target="#daily-bleeding-and-pain-together"><span class="header-section-number">3.7</span> Daily bleeding and pain together</a></li>
-  <li><a href="#ever-reported-pain-location-map-symmetric-regions" id="toc-ever-reported-pain-location-map-symmetric-regions" class="nav-link" data-scroll-target="#ever-reported-pain-location-map-symmetric-regions"><span class="header-section-number">3.8</span> Ever-reported pain location map (symmetric regions)</a></li>
-  <li><a href="#time-since-contraceptive-initiation" id="toc-time-since-contraceptive-initiation" class="nav-link" data-scroll-target="#time-since-contraceptive-initiation"><span class="header-section-number">3.9</span> Time since contraceptive initiation</a></li>
-  <li><a href="#inferred-menstrual-cycles-and-cycle-length" id="toc-inferred-menstrual-cycles-and-cycle-length" class="nav-link" data-scroll-target="#inferred-menstrual-cycles-and-cycle-length"><span class="header-section-number">3.10</span> Inferred menstrual cycles and cycle length</a></li>
-  <li><a href="#ever-reported-pain-by-inferred-cycle" id="toc-ever-reported-pain-by-inferred-cycle" class="nav-link" data-scroll-target="#ever-reported-pain-by-inferred-cycle"><span class="header-section-number">3.11</span> Ever-reported pain by inferred cycle</a></li>
-  <li><a href="#pain-timing-within-successive-inferred-cycles" id="toc-pain-timing-within-successive-inferred-cycles" class="nav-link" data-scroll-target="#pain-timing-within-successive-inferred-cycles"><span class="header-section-number">3.12</span> Pain timing within successive inferred cycles</a></li>
+  <li><a href="#how-to-read-this-report" id="toc-how-to-read-this-report" class="nav-link active" data-scroll-target="#how-to-read-this-report"><span class="header-section-number">6.1</span> How to read this report</a></li>
+  <li><a href="#overview" id="toc-overview" class="nav-link" data-scroll-target="#overview"><span class="header-section-number">6.2</span> Overview</a></li>
+  <li><a href="#daily-questionnaire-overview" id="toc-daily-questionnaire-overview" class="nav-link" data-scroll-target="#daily-questionnaire-overview"><span class="header-section-number">6.3</span> Daily questionnaire overview</a></li>
+  <li><a href="#daily-symptom-trend" id="toc-daily-symptom-trend" class="nav-link" data-scroll-target="#daily-symptom-trend"><span class="header-section-number">6.4</span> Daily symptom trend</a></li>
+  <li><a href="#daily-menstrual-bleeding" id="toc-daily-menstrual-bleeding" class="nav-link" data-scroll-target="#daily-menstrual-bleeding"><span class="header-section-number">6.5</span> Daily menstrual bleeding</a></li>
+  <li><a href="#daily-menstrual-pain" id="toc-daily-menstrual-pain" class="nav-link" data-scroll-target="#daily-menstrual-pain"><span class="header-section-number">6.6</span> Daily menstrual pain</a></li>
+  <li><a href="#daily-bleeding-and-pain-together" id="toc-daily-bleeding-and-pain-together" class="nav-link" data-scroll-target="#daily-bleeding-and-pain-together"><span class="header-section-number">6.7</span> Daily bleeding and pain together</a></li>
+  <li><a href="#ever-reported-pain-location-map-symmetric-regions" id="toc-ever-reported-pain-location-map-symmetric-regions" class="nav-link" data-scroll-target="#ever-reported-pain-location-map-symmetric-regions"><span class="header-section-number">6.8</span> Ever-reported pain location map (symmetric regions)</a></li>
+  <li><a href="#time-since-contraceptive-initiation" id="toc-time-since-contraceptive-initiation" class="nav-link" data-scroll-target="#time-since-contraceptive-initiation"><span class="header-section-number">6.9</span> Time since contraceptive initiation</a></li>
+  <li><a href="#inferred-menstrual-cycles-and-cycle-length" id="toc-inferred-menstrual-cycles-and-cycle-length" class="nav-link" data-scroll-target="#inferred-menstrual-cycles-and-cycle-length"><span class="header-section-number">6.10</span> Inferred menstrual cycles and cycle length</a></li>
+  <li><a href="#ever-reported-pain-by-inferred-cycle" id="toc-ever-reported-pain-by-inferred-cycle" class="nav-link" data-scroll-target="#ever-reported-pain-by-inferred-cycle"><span class="header-section-number">6.11</span> Ever-reported pain by inferred cycle</a></li>
+  <li><a href="#pain-timing-within-successive-inferred-cycles" id="toc-pain-timing-within-successive-inferred-cycles" class="nav-link" data-scroll-target="#pain-timing-within-successive-inferred-cycles"><span class="header-section-number">6.12</span> Pain timing within successive inferred cycles</a></li>
   </ul>
 </nav>
     </div>
@@ -175,7 +187,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></h1>
+<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></h1>
 <p class="subtitle lead">Daily ePRO results and inferred-cycle timing</p>
 </div>
 
@@ -313,8 +325,8 @@ ul.task-list li input[type="checkbox"] {
   background: var(--bs-body-bg);
 }
 </style>
-<section id="how-to-read-this-report" class="level2" data-number="3.1">
-<h2 data-number="3.1" class="anchored" data-anchor-id="how-to-read-this-report"><span class="header-section-number">3.1</span> How to read this report</h2>
+<section id="how-to-read-this-report" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="how-to-read-this-report"><span class="header-section-number">6.1</span> How to read this report</h2>
 <p>This report answers several related—but different—questions. Keeping the unit and denominator clear is essential because the same participant can submit many daily forms, several monthly forms, and observations from multiple menstrual cycles.</p>
 <table class="caption-top table">
 <colgroup>
@@ -360,8 +372,8 @@ ul.task-list li input[type="checkbox"] {
 <p><strong>Confidence intervals.</strong> Whiskers on proportion bar charts are participant-clustered 95% bootstrap confidence intervals. The bootstrap resamples whole participants—not individual rows—so all daily or monthly records from the same person remain together. Wider intervals mean the estimate is less precise. They describe sampling uncertainty in this dataset; they do not correct bias from missing reports, an unrepresentative sample, or a misspecified cycle rule.</p>
 <p><strong>Important interpretation boundary.</strong> These analyses are descriptive. A difference over time or between cycles is not, by itself, evidence that the contraceptive caused the difference. Formal causal questions would require a prespecified comparison design and statistical model.</p>
 </section>
-<section id="overview" class="level2" data-number="3.2">
-<h2 data-number="3.2" class="anchored" data-anchor-id="overview"><span class="header-section-number">3.2</span> Overview</h2>
+<section id="overview" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="overview"><span class="header-section-number">6.2</span> Overview</h2>
 <p>Daily percentages use submitted daily records as the denominator. Monthly percentages use submitted participant-month records. Conditional questions use only records for which the XLSForm skip logic makes the question relevant.</p>
 <div class="bodymap-summary">
   <div class="bodymap-stat">
@@ -383,15 +395,15 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <p>All input paths, source-field names, study-site labels, body-map limits, cycle-inference rules, and display ranges are read from <code>dashboard_config.yml</code>. Changing the configuration and rerendering the book updates every page without editing the analysis code.</p>
 </section>
-<section id="daily-questionnaire-overview" class="level2" data-number="3.3">
-<h2 data-number="3.3" class="anchored" data-anchor-id="daily-questionnaire-overview"><span class="header-section-number">3.3</span> Daily questionnaire overview</h2>
+<section id="daily-questionnaire-overview" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="daily-questionnaire-overview"><span class="header-section-number">6.3</span> Daily questionnaire overview</h2>
 <p>The daily form records symptoms about the previous day. The dummy data contain repeated submissions from the same participants, so percentages below describe submissions rather than unique people unless stated otherwise.</p>
 <p><strong>What.</strong> This section describes bleeding and pain one day at a time.</p>
 <p><strong>How.</strong> Each submitted daily form is initially one observation. Conditional follow-up questions use only forms for which the question applied—for example, pain severity is calculated only among forms reporting pain.</p>
 <p><strong>Why.</strong> Daily reporting captures short-term variation that a monthly recall question may smooth over or forget. It is especially useful for identifying timing and symptom co-occurrence.</p>
 </section>
-<section id="daily-symptom-trend" class="level2" data-number="3.4">
-<h2 data-number="3.4" class="anchored" data-anchor-id="daily-symptom-trend"><span class="header-section-number">3.4</span> Daily symptom trend</h2>
+<section id="daily-symptom-trend" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="daily-symptom-trend"><span class="header-section-number">6.4</span> Daily symptom trend</h2>
 <p><strong>What it shows.</strong> The lines show the percentage of submitted daily forms reporting bleeding or pain on each calendar date.</p>
 <p><strong>How to read it.</strong> Peaks indicate dates on which a larger share of available submissions were positive. They do not necessarily mean more participants were enrolled on those dates, so completion volume and missingness should be checked alongside the trend.</p>
 <div class="cell">
@@ -403,8 +415,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </div>
-<section id="daily-symptom-prevalence-by-study-site" class="level3" data-number="3.4.1">
-<h3 data-number="3.4.1" class="anchored" data-anchor-id="daily-symptom-prevalence-by-study-site"><span class="header-section-number">3.4.1</span> Daily symptom prevalence by study site</h3>
+<section id="daily-symptom-prevalence-by-study-site" class="level3" data-number="6.4.1">
+<h3 data-number="6.4.1" class="anchored" data-anchor-id="daily-symptom-prevalence-by-study-site"><span class="header-section-number">6.4.1</span> Daily symptom prevalence by study site</h3>
 <p><strong>What it shows.</strong> This selected site breakdown compares the proportion of daily submissions reporting bleeding or pain across the three study sites.</p>
 <p><strong>How it is calculated.</strong> The denominator is submitted daily forms within each site. Confidence intervals resample whole participants within that site, so repeated forms from one participant remain together.</p>
 <p><strong>Why it helps.</strong> A pooled percentage can conceal operational, population, or reporting differences between sites. The chart is descriptive and should prompt investigation rather than a causal conclusion about site.</p>
@@ -419,8 +431,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </section>
 </section>
-<section id="daily-menstrual-bleeding" class="level2" data-number="3.5">
-<h2 data-number="3.5" class="anchored" data-anchor-id="daily-menstrual-bleeding"><span class="header-section-number">3.5</span> Daily menstrual bleeding</h2>
+<section id="daily-menstrual-bleeding" class="level2" data-number="6.5">
+<h2 data-number="6.5" class="anchored" data-anchor-id="daily-menstrual-bleeding"><span class="header-section-number">6.5</span> Daily menstrual bleeding</h2>
 <p><strong>What it shows.</strong> Four separate distributions describe whether bleeding occurred, whether it was expected, its amount, and how that amount compared with expectation.</p>
 <p><strong>How it is calculated.</strong> Each panel has its own relevant denominator. The first two use all daily submissions; amount uses bleeding-positive submissions; comparison with expectation uses bleeding-positive submissions for which bleeding was expected.</p>
 <p><strong>Why it matters.</strong> Separating occurrence, amount, and predictability distinguishes a common but expected pattern from bleeding that is surprising or difficult to anticipate.</p>
@@ -534,8 +546,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="daily-menstrual-pain" class="level2" data-number="3.6">
-<h2 data-number="3.6" class="anchored" data-anchor-id="daily-menstrual-pain"><span class="header-section-number">3.6</span> Daily menstrual pain</h2>
+<section id="daily-menstrual-pain" class="level2" data-number="6.6">
+<h2 data-number="6.6" class="anchored" data-anchor-id="daily-menstrual-pain"><span class="header-section-number">6.6</span> Daily menstrual pain</h2>
 <p><strong>What it shows.</strong> These panels separate pain occurrence, expectation, severity, severity relative to expectation, and duration.</p>
 <p><strong>How it is calculated.</strong> Occurrence and expectedness use all daily submissions. Severity and duration use pain-positive submissions. Severity compared with expectation uses the subset for which pain was expected.</p>
 <p><strong>Why it matters.</strong> Frequency alone does not capture symptom burden. Severity, duration, and unexpected pain may be more relevant to acceptability and daily functioning.</p>
@@ -673,8 +685,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="daily-bleeding-and-pain-together" class="level2" data-number="3.7">
-<h2 data-number="3.7" class="anchored" data-anchor-id="daily-bleeding-and-pain-together"><span class="header-section-number">3.7</span> Daily bleeding and pain together</h2>
+<section id="daily-bleeding-and-pain-together" class="level2" data-number="6.7">
+<h2 data-number="6.7" class="anchored" data-anchor-id="daily-bleeding-and-pain-together"><span class="header-section-number">6.7</span> Daily bleeding and pain together</h2>
 <p><strong>What it shows.</strong> Each horizontal bar is all daily submissions in one bleeding group. The two sections show the complementary proportions reporting no pain and pain, so every submitted day is represented.</p>
 <p><strong>How it is calculated.</strong> Percentages sum to 100% separately within bleeding and non-bleeding submissions. Counts are daily forms rather than unique participants; participant-clustered confidence intervals are provided below.</p>
 <p><strong>Why it matters.</strong> This is an internal descriptive comparator: it indicates whether pain is concentrated on days with bleeding. The clustered interval keeps each participant’s repeated records together, but the chart still does not establish causation.</p>
@@ -734,8 +746,8 @@ ul.task-list li input[type="checkbox"] {
 </div>
 </div>
 </section>
-<section id="ever-reported-pain-location-map-symmetric-regions" class="level2" data-number="3.8">
-<h2 data-number="3.8" class="anchored" data-anchor-id="ever-reported-pain-location-map-symmetric-regions"><span class="header-section-number">3.8</span> Ever-reported pain location map (symmetric regions)</h2>
+<section id="ever-reported-pain-location-map-symmetric-regions" class="level2" data-number="6.8">
+<h2 data-number="6.8" class="anchored" data-anchor-id="ever-reported-pain-location-map-symmetric-regions"><span class="header-section-number">6.8</span> Ever-reported pain location map (symmetric regions)</h2>
 <p>Locations are read only from daily submissions where <code>${menstrual_pain_yesterday} = '1'</code>, because that is when the body-map question is shown. The denominator is nevertheless all unique participants in the dataset, making each percentage the proportion of the full cohort who reported pain in that region at least once. Left and right members of an otherwise identical region pair are combined. Hands and feet also ignore dorsal/ventral surface. Arms are grouped as fore, mid, or upper; legs are grouped as lower or upper. Each participant contributes at most once to a combined region across all pain-positive daily submissions.</p>
 <p><strong>What it answers.</strong> “Did this participant ever report pain in this broader body area, regardless of side?”</p>
 <p><strong>Why use it.</strong> The symmetric view is easier to communicate and less affected by inconsistent side selection. It should be presented alongside—not instead of—the detailed map when laterality could matter.</p>
@@ -908,8 +920,8 @@ ul.task-list li input[type="checkbox"] {
     }
   })();</script>
 </div>
-<section id="most-frequently-ever-reported-pain-regions" class="level3" data-number="3.8.1">
-<h3 data-number="3.8.1" class="anchored" data-anchor-id="most-frequently-ever-reported-pain-regions"><span class="header-section-number">3.8.1</span> Most frequently ever-reported pain regions</h3>
+<section id="most-frequently-ever-reported-pain-regions" class="level3" data-number="6.8.1">
+<h3 data-number="6.8.1" class="anchored" data-anchor-id="most-frequently-ever-reported-pain-regions"><span class="header-section-number">6.8.1</span> Most frequently ever-reported pain regions</h3>
 <div class="bodymap-table-scroll">
 <table>
 <thead>
@@ -1453,8 +1465,8 @@ Hand
 <p>The window is deliberately compact, but every region remains available by scrolling. Since participants can select multiple pain regions, the location percentages are not expected to sum to 100%.</p>
 </section>
 </section>
-<section id="time-since-contraceptive-initiation" class="level2" data-number="3.9">
-<h2 data-number="3.9" class="anchored" data-anchor-id="time-since-contraceptive-initiation"><span class="header-section-number">3.9</span> Time since contraceptive initiation</h2>
+<section id="time-since-contraceptive-initiation" class="level2" data-number="6.9">
+<h2 data-number="6.9" class="anchored" data-anchor-id="time-since-contraceptive-initiation"><span class="header-section-number">6.9</span> Time since contraceptive initiation</h2>
 <p>Elapsed time since <code>programme_start_date</code> is directly observed and does not depend on bleeding-pattern inference. The chart divides follow-up into consecutive 30-day programme periods. Within each period, each participant contributes once to each symptom percentage regardless of how many daily forms they submitted.</p>
 <p><strong>Why this view is useful.</strong> It asks whether the proportion of participants ever reporting bleeding or pain changes as exposure time accumulates, without requiring a menstrual cycle to be successfully inferred.</p>
 <div class="cell">
@@ -1467,8 +1479,8 @@ Hand
 </div>
 </div>
 </section>
-<section id="inferred-menstrual-cycles-and-cycle-length" class="level2" data-number="3.10">
-<h2 data-number="3.10" class="anchored" data-anchor-id="inferred-menstrual-cycles-and-cycle-length"><span class="header-section-number">3.10</span> Inferred menstrual cycles and cycle length</h2>
+<section id="inferred-menstrual-cycles-and-cycle-length" class="level2" data-number="6.10">
+<h2 data-number="6.10" class="anchored" data-anchor-id="inferred-menstrual-cycles-and-cycle-length"><span class="header-section-number">6.10</span> Inferred menstrual cycles and cycle length</h2>
 <p>Cycle numbering is participant-specific and begins after <code>programme_start_date</code>, the contraceptive/programme start date. The first confirmed menstrual onset after that date is inferred cycle 1, followed by inferred cycle 2, cycle 3, and so on. With the supplied configuration, CD1 is the first non-spotting bleeding day followed by blood reported on the next consecutive calendar day. Confirmed onsets less than the configured minimum interval apart are not allowed to increment the inferred cycle number. Distinct shorter events remain bleeding episodes and can be analysed separately.</p>
 <p><strong>What is being inferred.</strong> The form does not contain an official cycle number or confirmed biological cycle start. The analysis therefore applies an explicit, configurable rule to observed bleeding reports.</p>
 <p><strong>Why this needs caution.</strong> Missing daily forms can hide an onset and make two true cycles appear as one long interval. Long intervals are retained and flagged rather than silently removed, so the team can review whether they reflect genuine bleeding patterns or incomplete observation.</p>
@@ -1518,8 +1530,8 @@ Hand
 </div>
 </div>
 </section>
-<section id="ever-reported-pain-by-inferred-cycle" class="level2" data-number="3.11">
-<h2 data-number="3.11" class="anchored" data-anchor-id="ever-reported-pain-by-inferred-cycle"><span class="header-section-number">3.11</span> Ever-reported pain by inferred cycle</h2>
+<section id="ever-reported-pain-by-inferred-cycle" class="level2" data-number="6.11">
+<h2 data-number="6.11" class="anchored" data-anchor-id="ever-reported-pain-by-inferred-cycle"><span class="header-section-number">6.11</span> Ever-reported pain by inferred cycle</h2>
 <p>Within each numbered cycle, a participant contributes at most once to each body region. The denominator is participants with that observed cycle, not daily submissions.</p>
 <p><strong>What it shows.</strong> Each small bar chart asks whether a region was reported at least once during inferred cycles 1, 2, and 3.</p>
 <p><strong>Why it matters.</strong> This separates a persistent location from one that becomes more or less common over successive programme cycles. The shared percentage scale supports comparison across regions; the confidence interval reflects the number of participants reaching each cycle.</p>
@@ -2075,8 +2087,8 @@ Ventral Neck Throat
 </div>
 <p>Regions are ordered by their aggregate prevalence across the displayed cycles (the total region reports divided by the total eligible participant-cycle observations). The compact window scrolls to retain every zero-valued region without overwhelming the page.</p>
 </section>
-<section id="pain-timing-within-successive-inferred-cycles" class="level2" data-number="3.12">
-<h2 data-number="3.12" class="anchored" data-anchor-id="pain-timing-within-successive-inferred-cycles"><span class="header-section-number">3.12</span> Pain timing within successive inferred cycles</h2>
+<section id="pain-timing-within-successive-inferred-cycles" class="level2" data-number="6.12">
+<h2 data-number="6.12" class="anchored" data-anchor-id="pain-timing-within-successive-inferred-cycles"><span class="header-section-number">6.12</span> Pain timing within successive inferred cycles</h2>
 <p>The heatmap retains actual cycle day rather than stretching every cycle to 28 days. Within each programme-cycle and cycle-day cell, each participant contributes at most once per region. The denominator is participants who submitted a daily report for that programme cycle and cycle day, so longer cycles and better reporters do not automatically contribute more weight to another cell.</p>
 <p><strong>What it shows.</strong> Darker cells indicate that a larger percentage of participants observed on that cycle day reported the body region.</p>
 <p><strong>Why it matters.</strong> The heatmap can reveal pain concentrated around inferred cycle onset, appearing later in the cycle, or recurring at similar times across successive cycles. It remains descriptive because cycle day is inferred from bleeding—not confirmed ovulation.</p>
@@ -2090,8 +2102,8 @@ Ventral Neck Throat
 </div>
 </div>
 <p>All symmetric regions are shown in one continuous heatmap. Vertical lines separate successive inferred cycles and the x-axis restarts at cycle day 1 within each section. Explicit zero-report cells remain visible; pale grey means there was no eligible participant report for that inferred cycle day, so a percentage cannot be calculated. Set <code>bodymap.top_regions_timing</code> to an integer in the config only if a shorter, highest-prevalence subset is wanted.</p>
-<section id="cumulative-pain-site-burden-within-each-inferred-cycle" class="level3" data-number="3.12.1">
-<h3 data-number="3.12.1" class="anchored" data-anchor-id="cumulative-pain-site-burden-within-each-inferred-cycle"><span class="header-section-number">3.12.1</span> Cumulative pain-site burden within each inferred cycle</h3>
+<section id="cumulative-pain-site-burden-within-each-inferred-cycle" class="level3" data-number="6.12.1">
+<h3 data-number="6.12.1" class="anchored" data-anchor-id="cumulative-pain-site-burden-within-each-inferred-cycle"><span class="header-section-number">6.12.1</span> Cumulative pain-site burden within each inferred cycle</h3>
 <p><strong>What it shows.</strong> This companion heatmap collapses the daily timing information into one value for each region and inferred cycle. A participant who reports a region on several days has a larger value than someone who reports it once.</p>
 <p><strong>How it is calculated.</strong> For each participant and completed inferred cycle, the numerator is observed daily forms on which the region was reported and the denominator is all observed daily forms in that cycle. These participant-level proportions are then averaged, giving every participant equal weight despite differences in form completion.</p>
 <p><strong>Why it matters.</strong> The ever-reported chart measures how widely a site occurs across participants. This measure instead captures persistence across days. A region can therefore have broad reach but low cumulative burden, or affect fewer participants repeatedly.</p>
@@ -2106,8 +2118,8 @@ Ventral Neck Throat
 </div>
 <p>Rows are ordered by cumulative burden across the displayed cycles. A value of 10%, for example, means that the average participant reported that region on 10% of their observed daily forms within that completed cycle. This is a reporting-day burden measure rather than a biological duration estimate: unsubmitted days remain unknown.</p>
 </section>
-<section id="available-participants-by-inferred-cycle-and-cycle-day" class="level3" data-number="3.12.2">
-<h3 data-number="3.12.2" class="anchored" data-anchor-id="available-participants-by-inferred-cycle-and-cycle-day"><span class="header-section-number">3.12.2</span> Available participants by inferred cycle and cycle day</h3>
+<section id="available-participants-by-inferred-cycle-and-cycle-day" class="level3" data-number="6.12.2">
+<h3 data-number="6.12.2" class="anchored" data-anchor-id="available-participants-by-inferred-cycle-and-cycle-day"><span class="header-section-number">6.12.2</span> Available participants by inferred cycle and cycle day</h3>
 <p>This retention-style chart shows the denominator behind the heatmap. Each line is an inferred cycle; its height on a given cycle day is the number of participants who supplied a daily report on that day. A falling line therefore reflects a mixture of shorter cycles and missing daily forms. It resembles an at-risk curve, but it is not a formal survival estimate because participants can miss one day and submit again later.</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -2125,6 +2137,76 @@ Ventral Neck Throat
 </section>
 
 </main> <!-- /main -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const startsExplanation = (element) => {
+    if (!element || element.tagName !== "P") return false;
+    const lead = element.querySelector(":scope > strong:first-child");
+    return lead && /^(What|How|Why)(\s|\.|$)/i.test(lead.textContent.trim());
+  };
+
+  document.querySelectorAll("main.content").forEach((main) => {
+    const paragraphs = Array.from(main.querySelectorAll("p"));
+    paragraphs.forEach((first) => {
+      if (
+        !first.isConnected ||
+        first.closest(".dashboard-explainer") ||
+        !startsExplanation(first)
+      ) return;
+
+      const group = [first];
+      let next = first.nextElementSibling;
+      while (startsExplanation(next)) {
+        group.push(next);
+        next = next.nextElementSibling;
+      }
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+      first.before(details);
+      group.forEach((paragraph) => details.appendChild(paragraph));
+    });
+
+    // Give every rendered content section the same optional explanation panel.
+    // Existing What/How/Why text is retained; chart-only sections receive a
+    // short fallback so the dashboard remains visually concise and consistent.
+    main.querySelectorAll("section.level2, section.level3, section.level4").forEach((section) => {
+      const directChildren = Array.from(section.children);
+      if (directChildren.some((child) => child.matches("details.dashboard-explainer"))) return;
+
+      const heading = directChildren.find((child) => /^H[2-4]$/.test(child.tagName));
+      if (!heading) return;
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+
+      let next = heading.nextElementSibling;
+      const openingParagraphs = [];
+      while (next && next.tagName === "P" && !next.closest("details")) {
+        openingParagraphs.push(next);
+        next = next.nextElementSibling;
+      }
+
+      if (openingParagraphs.length > 0) {
+        openingParagraphs.forEach((paragraph) => details.appendChild(paragraph));
+      } else {
+        const description = document.createElement("p");
+        const title = heading.textContent.trim().replace(/\s+/g, " ");
+        description.textContent = `This section summarises ${title.toLowerCase()} using the currently available study data and configured monitoring rules.`;
+        details.appendChild(description);
+      }
+
+      heading.insertAdjacentElement("afterend", details);
+    });
+  });
+});
+</script>
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -2527,13 +2609,13 @@ Ventral Neck Throat
   </script>
 <nav class="page-navigation column-body">
   <div class="nav-page nav-page-previous">
-      <a href="./study_statistics.html" class="pagination-link" aria-label="Study profile and demographics">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Study profile and demographics</span></span>
+      <a href="./site_ohsu.html" class="pagination-link" aria-label="OHSU monitoring">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">OHSU monitoring</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
       <a href="./monthly_epro_analysis.html" class="pagination-link" aria-label="Monthly bleeding and pain">
-        <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

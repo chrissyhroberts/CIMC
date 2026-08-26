@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>6&nbsp; Technical appendix – CIMC study monitoring dashboard</title>
+<title>8&nbsp; Technical appendix – CIMC study monitoring dashboard</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -65,7 +65,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./data_quality.html" rel="prev">
+<link href="./monthly_epro_analysis.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/axe/axe-check.js" type="module"></script>
@@ -118,7 +118,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./technical_appendix.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Technical appendix</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./technical_appendix.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Technical appendix</span></a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -157,26 +157,38 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./site_wmru.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Wits MRU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_profamilia.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Profamilia monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./site_ohsu.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">OHSU monitoring</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./menstrual_epro_daily_monthly_analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Daily bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./monthly_epro_analysis.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./data_quality.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data quality and analysis checks</span></span></a>
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./technical_appendix.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Technical appendix</span></span></a>
   </div>
 </li>
     </ul>
@@ -189,8 +201,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Table of contents</h2>
    
   <ul class="collapse">
-  <li><a href="#configuring-the-dashboard" id="toc-configuring-the-dashboard" class="nav-link active" data-scroll-target="#configuring-the-dashboard"><span class="header-section-number">6.1</span> Configuring the dashboard</a></li>
-  <li><a href="#technical-appendix-detailed-ever-reported-pain-location-map" id="toc-technical-appendix-detailed-ever-reported-pain-location-map" class="nav-link" data-scroll-target="#technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">6.2</span> Technical appendix: detailed ever-reported pain location map</a></li>
+  <li><a href="#configuring-the-dashboard" id="toc-configuring-the-dashboard" class="nav-link active" data-scroll-target="#configuring-the-dashboard"><span class="header-section-number">8.1</span> Configuring the dashboard</a></li>
+  <li><a href="#technical-appendix-detailed-ever-reported-pain-location-map" id="toc-technical-appendix-detailed-ever-reported-pain-location-map" class="nav-link" data-scroll-target="#technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">8.2</span> Technical appendix: detailed ever-reported pain location map</a></li>
   </ul>
 </nav>
     </div>
@@ -199,7 +211,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Technical appendix</span></h1>
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Technical appendix</span></h1>
 <p class="subtitle lead">Detailed ever-reported pain map</p>
 </div>
 
@@ -337,18 +349,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   background: var(--bs-body-bg);
 }
 </style>
-<section id="configuring-the-dashboard" class="level2" data-number="6.1">
-<h2 data-number="6.1" class="anchored" data-anchor-id="configuring-the-dashboard"><span class="header-section-number">6.1</span> Configuring the dashboard</h2>
+<section id="configuring-the-dashboard" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="configuring-the-dashboard"><span class="header-section-number">8.1</span> Configuring the dashboard</h2>
 <p>The dashboard’s study-specific settings are held in one file: <a href="dashboard_config.yml"><code>dashboard_config.yml</code></a>. This keeps choices such as study dates, site targets, reminder thresholds, cycle-inference rules, and display limits separate from the R analysis code.</p>
 <p><strong>What this means.</strong> Most routine adaptations should require a change to the configuration file followed by a fresh render—not edits scattered through the analysis pages.</p>
 <p><strong>Why it helps.</strong> Keeping assumptions in one clearly annotated file makes them easier to review with the study team, apply consistently across all pages, and record when the dashboard is updated.</p>
-<section id="safe-editing-workflow" class="level3" data-number="6.1.1">
-<h3 data-number="6.1.1" class="anchored" data-anchor-id="safe-editing-workflow"><span class="header-section-number">6.1.1</span> Safe editing workflow</h3>
+<section id="safe-editing-workflow" class="level3" data-number="8.1.1">
+<h3 data-number="8.1.1" class="anchored" data-anchor-id="safe-editing-workflow"><span class="header-section-number">8.1.1</span> Safe editing workflow</h3>
 <ol type="1">
 <li>Make a copy of the current <code>dashboard_config.yml</code> before making a substantial change.</li>
 <li>Open the file in a plain-text editor and change only the value after the relevant colon.</li>
 <li>Keep the existing indentation. YAML uses spaces to show which settings belong together; tabs should not be used.</li>
-<li>Save the file, render the Quarto book again, and review the data-quality page as well as the chart affected by the change.</li>
+<li>Save the file, render the Quarto book again, and review the study-wide and relevant site data-quality sections as well as the chart affected by the change.</li>
 <li>Record analytically important changes—especially cycle rules, denominators, date cutoffs, and confidence levels—so results from different dashboard versions are not compared as if their definitions were identical.</li>
 </ol>
 <p>YAML values have a few conventions:</p>
@@ -363,8 +375,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">monitoring</span><span class="kw">:</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">consecutive_missed_days</span><span class="kw">:</span><span class="at"> </span><span class="dv">4</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </section>
-<section id="which-section-controls-what" class="level3" data-number="6.1.2">
-<h3 data-number="6.1.2" class="anchored" data-anchor-id="which-section-controls-what"><span class="header-section-number">6.1.2</span> Which section controls what?</h3>
+<section id="which-section-controls-what" class="level3" data-number="8.1.2">
+<h3 data-number="8.1.2" class="anchored" data-anchor-id="which-section-controls-what"><span class="header-section-number">8.1.2</span> Which section controls what?</h3>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -452,8 +464,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="switching-between-dummy-and-production-data" class="level3" data-number="6.1.3">
-<h3 data-number="6.1.3" class="anchored" data-anchor-id="switching-between-dummy-and-production-data"><span class="header-section-number">6.1.3</span> Switching between dummy and production data</h3>
+<section id="switching-between-dummy-and-production-data" class="level3" data-number="8.1.3">
+<h3 data-number="8.1.3" class="anchored" data-anchor-id="switching-between-dummy-and-production-data"><span class="header-section-number">8.1.3</span> Switching between dummy and production data</h3>
 <p>The controlling setting is:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data_source</span><span class="kw">:</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">mode</span><span class="kw">:</span><span class="at"> development</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -461,8 +473,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>The API token itself must <strong>not</strong> be written into <code>dashboard_config.yml</code> or committed to GitHub. Production action lists are also excluded from the rendered site by default because they can contain participant identifiers or contact information.</p>
 <p>During early live testing, Kobo may omit a question from its JSON response when every downloaded submission skipped that question. The importer therefore treats unanswered monthly outcome fields as empty rather than assuming the connected asset is wrong. When a test record lacks the form’s calculated report date, it uses the calendar day before the Kobo submission timestamp because CIMC questions describe “yesterday.” If no monthly records are yet due, the monthly page displays a “not yet available” explanation and will populate after the first eligible monthly submission. Participant identifiers and the core CIMC routing fields are still validated so an incorrect asset UID or incompatible form does not pass silently.</p>
 </section>
-<section id="settings-that-change-the-meaning-of-results" class="level3" data-number="6.1.4">
-<h3 data-number="6.1.4" class="anchored" data-anchor-id="settings-that-change-the-meaning-of-results"><span class="header-section-number">6.1.4</span> Settings that change the meaning of results</h3>
+<section id="settings-that-change-the-meaning-of-results" class="level3" data-number="8.1.4">
+<h3 data-number="8.1.4" class="anchored" data-anchor-id="settings-that-change-the-meaning-of-results"><span class="header-section-number">8.1.4</span> Settings that change the meaning of results</h3>
 <p>Some settings affect presentation only, while others change the underlying calculation. Changes to the following should be agreed and documented before results are compared over time:</p>
 <ul>
 <li><code>study.data_cutoff</code>, follow-up duration, and monthly due-day rules;</li>
@@ -474,19 +486,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </ul>
 <p>By contrast, chart titles, the number of intersections displayed, and the visible chart window generally change presentation rather than the source records. A shorter display window can still hide later observations from view, so it should be described clearly.</p>
 </section>
-<section id="rebuilding-the-dashboard" class="level3" data-number="6.1.5">
-<h3 data-number="6.1.5" class="anchored" data-anchor-id="rebuilding-the-dashboard"><span class="header-section-number">6.1.5</span> Rebuilding the dashboard</h3>
+<section id="rebuilding-the-dashboard" class="level3" data-number="8.1.5">
+<h3 data-number="8.1.5" class="anchored" data-anchor-id="rebuilding-the-dashboard"><span class="header-section-number">8.1.5</span> Rebuilding the dashboard</h3>
 <p>After saving the configuration, render the complete Quarto project from the project folder. The pre-render step prepares either the dummy or Kobo data, the R code recalculates every page, and the completed HTML book is written to <code>docs/</code>.</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">quarto</span> render</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <p>Do not manually edit files inside <code>docs/</code>: they are generated outputs and will be replaced during the next render. If a render stops after a configuration change, first check spelling, indentation, quote pairing, and whether list labels and boundaries contain compatible numbers of entries.</p>
 </section>
-<section id="what-the-dashboard-is-written-in" class="level3" data-number="6.1.6">
-<h3 data-number="6.1.6" class="anchored" data-anchor-id="what-the-dashboard-is-written-in"><span class="header-section-number">6.1.6</span> What the dashboard is written in</h3>
+<section id="what-the-dashboard-is-written-in" class="level3" data-number="8.1.6">
+<h3 data-number="8.1.6" class="anchored" data-anchor-id="what-the-dashboard-is-written-in"><span class="header-section-number">8.1.6</span> What the dashboard is written in</h3>
 <p>All data preparation, statistical summaries, confidence intervals, tables, and plots are implemented in <strong>R</strong>. The report pages are <strong>Quarto</strong> documents (<code>.qmd</code>), while <code>dashboard_config.yml</code> supplies YAML settings. The published HTML also uses CSS for appearance and a small amount of JavaScript for interactive elements such as body-map hover labels. No Python analysis pipeline is used.</p>
 </section>
 </section>
-<section id="technical-appendix-detailed-ever-reported-pain-location-map" class="level2" data-number="6.2">
-<h2 data-number="6.2" class="anchored" data-anchor-id="technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">6.2</span> Technical appendix: detailed ever-reported pain location map</h2>
+<section id="technical-appendix-detailed-ever-reported-pain-location-map" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="technical-appendix-detailed-ever-reported-pain-location-map"><span class="header-section-number">8.2</span> Technical appendix: detailed ever-reported pain location map</h2>
 <p>This version retains every original SVG region, including left/right and dorsal/ventral distinctions. Locations come only from pain-positive daily submissions; percentages use all unique participants as the denominator, and each participant contributes at most once per detailed region across the observation period.</p>
 <p><strong>What it answers.</strong> “Did this participant ever report pain in this exact anatomical region during follow-up?” Repeated reports in the same region do not increase that participant’s contribution.</p>
 <p><strong>Why it is in the appendix.</strong> The detailed map preserves laterality and body surface for clinical or instrument-development review, while the symmetric map earlier in the report provides the clearer primary summary.</p>
@@ -643,6 +655,76 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 
 </main> <!-- /main -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const startsExplanation = (element) => {
+    if (!element || element.tagName !== "P") return false;
+    const lead = element.querySelector(":scope > strong:first-child");
+    return lead && /^(What|How|Why)(\s|\.|$)/i.test(lead.textContent.trim());
+  };
+
+  document.querySelectorAll("main.content").forEach((main) => {
+    const paragraphs = Array.from(main.querySelectorAll("p"));
+    paragraphs.forEach((first) => {
+      if (
+        !first.isConnected ||
+        first.closest(".dashboard-explainer") ||
+        !startsExplanation(first)
+      ) return;
+
+      const group = [first];
+      let next = first.nextElementSibling;
+      while (startsExplanation(next)) {
+        group.push(next);
+        next = next.nextElementSibling;
+      }
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+      first.before(details);
+      group.forEach((paragraph) => details.appendChild(paragraph));
+    });
+
+    // Give every rendered content section the same optional explanation panel.
+    // Existing What/How/Why text is retained; chart-only sections receive a
+    // short fallback so the dashboard remains visually concise and consistent.
+    main.querySelectorAll("section.level2, section.level3, section.level4").forEach((section) => {
+      const directChildren = Array.from(section.children);
+      if (directChildren.some((child) => child.matches("details.dashboard-explainer"))) return;
+
+      const heading = directChildren.find((child) => /^H[2-4]$/.test(child.tagName));
+      if (!heading) return;
+
+      const details = document.createElement("details");
+      details.className = "dashboard-explainer";
+      const summary = document.createElement("summary");
+      summary.textContent = "About this section";
+      details.appendChild(summary);
+
+      let next = heading.nextElementSibling;
+      const openingParagraphs = [];
+      while (next && next.tagName === "P" && !next.closest("details")) {
+        openingParagraphs.push(next);
+        next = next.nextElementSibling;
+      }
+
+      if (openingParagraphs.length > 0) {
+        openingParagraphs.forEach((paragraph) => details.appendChild(paragraph));
+      } else {
+        const description = document.createElement("p");
+        const title = heading.textContent.trim().replace(/\s+/g, " ");
+        description.textContent = `This section summarises ${title.toLowerCase()} using the currently available study data and configured monitoring rules.`;
+        details.appendChild(description);
+      }
+
+      heading.insertAdjacentElement("afterend", details);
+    });
+  });
+});
+</script>
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -1045,8 +1127,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </script>
 <nav class="page-navigation column-body">
   <div class="nav-page nav-page-previous">
-      <a href="./data_quality.html" class="pagination-link" aria-label="Data quality and analysis checks">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data quality and analysis checks</span></span>
+      <a href="./monthly_epro_analysis.html" class="pagination-link" aria-label="Monthly bleeding and pain">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Monthly bleeding and pain</span></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">

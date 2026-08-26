@@ -1,0 +1,361 @@
+---
+title: "Participant follow-up calendar"
+subtitle: "Full-protocol daily and monthly completion patterns"
+format:
+  html:
+    page-layout: full
+    toc: true
+    toc-depth: 2
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: followup-calendar-setup
+
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(scales)
+library(knitr)
+library(yaml)
+library(htmltools)
+
+config <- read_yaml("dashboard_config.yml")
+id_column_type <- cols(uniqueid = col_character())
+enrolment_raw <- read_csv(
+  config$files$enrolment, col_types = id_column_type, show_col_types = FALSE
+)
+cimc <- read_csv(
+  config$files$cimc, col_types = id_column_type, show_col_types = FALSE
+)
+refresh_metadata <- read_csv(config$files$refresh_metadata, show_col_types = FALSE)
+
+data_mode <- tolower(config$data_source$mode)
+mode_settings <- config$data_source[[data_mode]]
+publish_action_lists <- isTRUE(mode_settings$publish_action_lists_in_rendered_site)
+data_cutoff <- as.Date(first(refresh_metadata$effective_data_cutoff))
+protocol_days <- as.integer(config$study$expected_daily_reports)
+monthly_due_day <- as.integer(config$study$monthly_due_day)
+site_labels <- unlist(config$labels$sites)
+sort_method <- tolower(config$monitoring$full_tracking_sort)
+max_participants <- config$monitoring$full_tracking_max_participants
+row_height <- config$monitoring$full_tracking_row_height_inches
+scroll_height <- config$display$full_tracking_scroll_height
+
+for (field in c("_id", "organization", "enrollment_date")) {
+  if (!field %in% names(enrolment_raw)) enrolment_raw[[field]] <- NA
+}
+for (field in c("date", "monthly_report_due", "QA", "QB")) {
+  if (!field %in% names(cimc)) cimc[[field]] <- NA
+}
+
+canonical_latest_record <- function(data) {
+  source_order <- seq_len(nrow(data))
+  kobo_order <- suppressWarnings(as.numeric(data[["_id"]]))
+  data |>
+    mutate(
+      uniqueid = as.character(uniqueid),
+      .canonical_order = coalesce(kobo_order, as.numeric(source_order))
+    ) |>
+    arrange(uniqueid, desc(.canonical_order)) |>
+    distinct(uniqueid, .keep_all = TRUE) |>
+    select(-.canonical_order)
+}
+
+enrolment <- canonical_latest_record(enrolment_raw) |>
+  mutate(
+    enrollment_date = as.Date(as.character(enrollment_date)),
+    site = unname(site_labels[as.character(organization)])
+  ) |>
+  filter(!is.na(uniqueid), !is.na(enrollment_date))
+
+cimc <- cimc |>
+  mutate(
+    uniqueid = as.character(uniqueid),
+    date = as.Date(as.character(date)),
+    monthly_report_due = str_to_lower(as.character(monthly_report_due)),
+    method_stop_date = as.Date(as.character(QB))
+  )
+
+method_stops <- cimc |>
+  filter(as.character(QA) %in% c("0", "no"), !is.na(method_stop_date)) |>
+  group_by(uniqueid) |>
+  summarise(method_stop_date = min(method_stop_date), .groups = "drop")
+
+participants <- enrolment |>
+  left_join(method_stops, by = "uniqueid") |>
+  mutate(
+    planned_end_date = enrollment_date + protocol_days - 1L,
+    observed_end_date = pmin(
+      planned_end_date, data_cutoff, coalesce(method_stop_date, data_cutoff),
+      na.rm = TRUE
+    ),
+    site = replace_na(as.character(site), "Site unavailable")
+  )
+
+if (protocol_days < 1L) {
+  stop("study.expected_daily_reports must be at least 1.")
+}
+
+if (nrow(participants) == 0) {
+  empty_gap_summary <- tibble(
+    participant_id = character(), site = character(), enrollment_date = as.Date(character()),
+    planned_end_date = as.Date(character()), observed_end_date = as.Date(character()),
+    observed_days = integer(), daily_received = integer(), missed_days = integer(),
+    gap_episodes = integer(), longest_gap = integer(), monthly_due = integer(),
+    monthly_received = integer(), monthly_missed = integer(), current_completion = double()
+  )
+  write_csv(empty_gap_summary, "participant_followup_gap_summary.csv", na = "")
+  cat(paste(
+    "## Participant follow-up is not yet available\n\n",
+    "No valid enrolment record is currently available. This page will populate ",
+    "after an enrolled participant is staged and the dashboard is rendered again.\n"
+  ))
+  knitr::knit_exit()
+}
+
+daily_keys <- cimc |>
+  filter(!is.na(uniqueid), !is.na(date)) |>
+  distinct(uniqueid, date) |>
+  transmute(key = paste(uniqueid, date)) |>
+  pull(key)
+
+monthly_keys <- cimc |>
+  filter(monthly_report_due == "yes", !is.na(uniqueid), !is.na(date)) |>
+  distinct(uniqueid, date) |>
+  transmute(key = paste(uniqueid, date)) |>
+  pull(key)
+
+calendar_grid <- crossing(
+  participants |>
+    select(uniqueid, site, enrollment_date, planned_end_date, observed_end_date, method_stop_date),
+  follow_up_day = seq_len(protocol_days)
+) |>
+  mutate(
+    calendar_date = enrollment_date + follow_up_day - 1L,
+    daily_received = paste(uniqueid, calendar_date) %in% daily_keys,
+    monthly_received = paste(uniqueid, calendar_date) %in% monthly_keys,
+    monthly_due = calendar_date <= observed_end_date &
+      as.integer(format(calendar_date, "%d")) == monthly_due_day,
+    due = calendar_date <= observed_end_date,
+    daily_missing = due & !daily_received,
+    monthly_missing = monthly_due & !monthly_received,
+    result = case_when(
+      !is.na(method_stop_date) & calendar_date > method_stop_date ~ "Follow-up ended",
+      calendar_date > data_cutoff ~ "Future / not yet due",
+      calendar_date > observed_end_date ~ "Follow-up ended",
+      monthly_received ~ "Monthly + daily received",
+      monthly_missing ~ "Monthly due — missing",
+      daily_received ~ "Daily received",
+      TRUE ~ "Daily missed"
+    ),
+    result = factor(
+      result,
+      levels = c(
+        "Daily received", "Daily missed", "Monthly + daily received",
+        "Monthly due — missing", "Future / not yet due", "Follow-up ended"
+      )
+    )
+  )
+
+gap_metrics <- calendar_grid |>
+  group_by(uniqueid, site, enrollment_date, planned_end_date, observed_end_date) |>
+  summarise(
+    observed_days = sum(due),
+    daily_received = sum(due & daily_received),
+    missed_days = sum(daily_missing),
+    gap_episodes = {
+      runs <- rle(daily_missing[due])
+      sum(runs$values)
+    },
+    longest_gap = {
+      runs <- rle(daily_missing[due])
+      if (any(runs$values)) max(runs$lengths[runs$values]) else 0L
+    },
+    monthly_due = sum(monthly_due),
+    monthly_received = sum(monthly_due & monthly_received),
+    monthly_missed = sum(monthly_missing),
+    current_completion = if_else(observed_days > 0, daily_received / observed_days, NA_real_),
+    .groups = "drop"
+  )
+
+valid_sort_methods <- c("gap_episodes", "missed_days", "longest_gap", "monthly_missed")
+if (!sort_method %in% valid_sort_methods) {
+  stop(
+    "monitoring.full_tracking_sort must be one of: ",
+    paste(valid_sort_methods, collapse = ", ")
+  )
+}
+
+gap_metrics <- gap_metrics |>
+  mutate(.sort_value = .data[[sort_method]]) |>
+  arrange(desc(.sort_value), desc(longest_gap), desc(missed_days), uniqueid)
+
+if (!is.null(max_participants)) {
+  gap_metrics <- gap_metrics |> slice_head(n = as.integer(max_participants))
+}
+
+gap_metrics <- gap_metrics |>
+  mutate(
+    rank = row_number(),
+    display_id = if (publish_action_lists) {
+      uniqueid
+    } else {
+      paste0("Participant ", sprintf("%03d", rank))
+    },
+    display_label = paste0(
+      display_id, "  ·  ", gap_episodes, " gap",
+      if_else(gap_episodes == 1, "", "s"), " / ", missed_days, " missed"
+    )
+  )
+
+calendar_display <- calendar_grid |>
+  semi_join(gap_metrics, by = "uniqueid") |>
+  left_join(gap_metrics |> select(uniqueid, rank, display_label), by = "uniqueid") |>
+  mutate(display_label = factor(display_label, levels = rev(gap_metrics$display_label)))
+
+write_csv(
+  gap_metrics |>
+    select(
+      participant_id = uniqueid, site, enrollment_date, planned_end_date,
+      observed_end_date, observed_days, daily_received, missed_days,
+      gap_episodes, longest_gap, monthly_due, monthly_received,
+      monthly_missed, current_completion
+    ),
+  "participant_followup_gap_summary.csv", na = ""
+)
+
+n_participants <- nrow(gap_metrics)
+n_observed_days <- sum(gap_metrics$observed_days)
+n_daily_received <- sum(gap_metrics$daily_received)
+n_gap_episodes <- sum(gap_metrics$gap_episodes)
+n_monthly_missed <- sum(gap_metrics$monthly_missed)
+plot_height <- max(7, n_participants * row_height)
+```
+
+This page is the individual-level counterpart to the completion-pattern UpSet chart. It shows *where* each participant's reporting gaps occur across the full protocol period, rather than reducing their pattern to a single completion category.
+
+**What it shows.** Each row is one participant and each column is a protocol follow-up day. Daily receipts, missed daily reports, monthly receipts, overdue monthly sections, future days, and days after early follow-up closure have distinct colours.
+
+**How it is calculated.** Protocol day 1 is each participant's enrolment date, so participants with different calendar start dates align on the same follow-up scale. By default, rows are ordered by the number of separate missing-report episodes, then longest gap and total missed days. The ranking rule, observation duration, monthly due day, row height, and optional participant limit are all configurable.
+
+**Why it helps.** Two participants can have the same overall completion percentage but very different operational risk: one may miss occasional isolated days while another disappears for a sustained period. This view makes those patterns visible and puts the records most likely to warrant review at the top.
+
+```{r}
+#| label: followup-calendar-kpis
+#| results: asis
+
+kpi <- function(label, value, note) {
+  tags$div(
+    class = "monitor-kpi",
+    tags$div(class = "monitor-kpi-label", label),
+    tags$div(class = "monitor-kpi-value", value),
+    tags$div(class = "monitor-kpi-note", note)
+  )
+}
+
+calendar_cards <- tags$div(
+  class = "monitor-kpis",
+  kpi("Participants displayed", comma(n_participants), paste("of", nrow(participants), "enrolled")),
+  kpi("Observed participant-days", comma(n_observed_days), "Due through the data cutoff"),
+  kpi("Daily completion", percent(n_daily_received / n_observed_days, accuracy = .1),
+      paste(comma(n_observed_days - n_daily_received), "missed")),
+  kpi("Missing-report episodes", comma(n_gap_episodes), "Separate runs of missed days"),
+  kpi("Monthly sections overdue", comma(n_monthly_missed), "Due but not received")
+)
+cat("```{=html}\n", as.character(calendar_cards), "\n```\n", sep = "")
+```
+
+## Full protocol completion heatmap
+
+The chart spans all `r protocol_days` configured protocol days. Vertical dividers mark each `r config$study$programme_period_days`-day programme period. Scroll vertically to review the full ordered cohort.
+
+```{r}
+#| label: followup-calendar-scroll-open
+#| results: asis
+cat(
+  '```{=html}\n<div class="full-tracking-scroll" style="--full-tracking-height: ',
+  scroll_height,
+  ';">\n```\n',
+  sep = ""
+)
+```
+
+```{r full-tracking-heatmap, fig.height=plot_height, fig.width=14}
+period_breaks <- seq(
+  config$study$programme_period_days,
+  protocol_days - 1L,
+  by = config$study$programme_period_days
+) + .5
+
+ggplot(calendar_display, aes(follow_up_day, display_label, fill = result)) +
+  geom_tile(colour = "white", linewidth = .12, width = .96, height = .86) +
+  geom_vline(xintercept = period_breaks, colour = "#344b56", linewidth = .35) +
+  scale_fill_manual(
+    values = c(
+      `Daily received` = "#59ad8b",
+      `Daily missed` = "#e58d87",
+      `Monthly + daily received` = "#7763a8",
+      `Monthly due — missing` = "#e2ac43",
+      `Future / not yet due` = "#edf1f2",
+      `Follow-up ended` = "#b9c1c3"
+    ),
+    breaks = c(
+      "Daily received", "Daily missed", "Monthly + daily received",
+      "Monthly due — missing", "Future / not yet due", "Follow-up ended"
+    ),
+    drop = FALSE
+  ) +
+  scale_x_continuous(
+    breaks = unique(c(1, seq(10, protocol_days, by = 10), protocol_days)),
+    expand = expansion(add = .2)
+  ) +
+  labs(x = "Protocol follow-up day", y = NULL, fill = NULL) +
+  theme_minimal(base_size = 10) +
+  theme(
+    legend.position = "top",
+    panel.grid = element_blank(),
+    axis.text.y = element_text(size = 7.5),
+    plot.margin = margin(5.5, 8, 5.5, 5.5)
+  )
+```
+
+```{=html}
+</div>
+```
+
+## Ranked gap summary
+
+The ranking table uses the same ordering as the heatmap. The participant-level CSV is regenerated on every render. In production it remains in the protected project directory unless action-list publication is explicitly enabled.
+
+```{r}
+#| label: followup-gap-table
+#| results: asis
+
+gap_table <- gap_metrics |>
+  transmute(
+    Rank = rank,
+    Participant = display_id,
+    Site = site,
+    `Gap episodes` = gap_episodes,
+    `Longest gap` = longest_gap,
+    `Missed daily` = missed_days,
+    `Daily completion` = percent(current_completion, accuracy = .1),
+    `Monthly missed` = monthly_missed
+  ) |>
+  kable(format = "html", align = c("r", "l", "l", "r", "r", "r", "r", "r"))
+
+cat('<div class="monitor-table-scroll monitor-table-compact">', gap_table, '</div>', sep = "\n")
+
+if (publish_action_lists) {
+  cat('\n[Download the ranked participant gap summary](participant_followup_gap_summary.csv){download="participant_followup_gap_summary.csv"}\n')
+} else {
+  cat("\nThe identified CSV is available only in the protected project output directory.\n")
+}
+```
