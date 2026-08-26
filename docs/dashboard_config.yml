@@ -1,0 +1,205 @@
+# ============================================================================
+# CIMC DASHBOARD CONFIGURATION
+# Edit values here, then rerender the Quarto book. Quoted dates use YYYY-MM-DD.
+# Percent thresholds are proportions: 0.80 means 80%.
+# ============================================================================
+
+# --- Data-source mode --------------------------------------------------------
+# Use "development" for the linked dummy datasets. Change only this value to
+# "production" when the Kobo server URL, asset UIDs, and token environment
+# variable have been configured below.
+data_source:
+  mode: development
+
+  development:
+    # TRUE reruns generate_monitoring_dummy_data.R before each Quarto render.
+    regenerate_dummy_data: false
+    # Development downloads may contain only invented identifiers and contacts.
+    publish_action_lists_in_rendered_site: true
+    files:
+      recruitment: dummy_recruitment_form_data.csv
+      enrolment: dummy_enrolment_sociodemographics_data.csv
+      cimc: dummy_CIMC_pro_data.csv
+      daily_data: dummy_daily_epro_data.csv
+      monthly_data: dummy_monthly_epro_data.csv
+
+  production:
+    # Global server: https://kf.kobotoolbox.org
+    # EU server:     https://eu.kobotoolbox.org
+    base_url: "https://kf.kobotoolbox.org"
+    api_token_environment_variable: "KOBO_API_TOKEN"
+    asset_uids:
+      recruitment: "aGTsMmXqJJozdciUMWtHbh"
+      enrolment: "aFXUYz53ZUjNBwm6tyKEvn"
+      cimc: "aUzYLx2ratBambJg5PA44s"
+    page_size: 1000
+    request_timeout_seconds: 120
+    request_max_tries: 3
+    # "retrieval_date" is recommended for missed-report monitoring because a
+    # day with no submissions must still advance the clock. Alternatives are
+    # "latest_cimc_submission" and "configured" (study.data_cutoff).
+    data_cutoff_strategy: retrieval_date
+    save_timestamped_raw_snapshots: true
+    snapshot_directory: data/kobo_snapshots
+    fail_if_a_form_has_no_submissions: true
+    # Keep FALSE unless the rendered site is access-controlled and publication
+    # of participant identifiers/contact details has been formally approved.
+    publish_action_lists_in_rendered_site: false
+
+# --- Runtime input files -----------------------------------------------------
+# prepare_dashboard_data.R stages either development or production data into
+# these paths before Quarto executes. Analysis pages should read only these.
+files:
+  recruitment: data/active/recruitment.csv
+  enrolment: data/active/enrolment.csv
+  cimc: data/active/cimc.csv
+  daily_data: data/active/daily_epro.csv
+  monthly_data: data/active/monthly_epro.csv
+  refresh_metadata: data/active/data_refresh_metadata.csv
+  bodymap_svg: bodymap_prototype.svg
+
+# --- Source-field mapping ----------------------------------------------------
+# Change these only if the analysis-ready files use different column names.
+fields:
+  participant_id: participant_id
+  programme_start_date: programme_start_date
+  report_date: report_date
+  reference_month: reference_month
+  pain_locations: pain_locations_yesterday
+
+# --- Study design and operational dates -------------------------------------
+study:
+  # Last date treated as available in this dashboard snapshot.
+  data_cutoff: "2026-08-24"
+  time_zone: "Europe/London"
+  # Planned participant observation window and calendar-month reporting rule.
+  expected_daily_reports: 90
+  contraceptive_start_eligibility_days: 74
+  monthly_due_day: 1
+  # Recruitment planning dates used for the planned trajectory and projected
+  # completion measures on the operational front page.
+  recruitment_start_date: "2026-05-25"
+  recruitment_target_date: "2026-09-30"
+  # Time bands used for programme-time summaries; these are not menstrual cycles.
+  programme_period_days: 30
+  # Recruitment targets used on page 1.
+  site_targets:
+    wmru: 50
+    profamilia: 50
+    ohsu: 50
+
+# --- Operational action-list thresholds ------------------------------------
+monitoring:
+  consecutive_missed_days: 3
+  eligible_not_enrolled_after_days: 7
+  no_daily_report_after_days: 2
+  monthly_report_grace_days: 3
+  good_daily_completion_threshold: 0.80
+  # Window used to estimate the current recruitment rate and projected finish.
+  recruitment_pace_window_days: 28
+  # Recent participant-day window shown in the completion tracking grid.
+  recent_daily_tracking_days: 14
+  recent_daily_tracking_max_participants: 18
+  # Full-study calendar ranking. Options: gap_episodes, missed_days,
+  # longest_gap, or monthly_missed. null displays every participant.
+  full_tracking_sort: gap_episodes
+  full_tracking_max_participants: null
+  full_tracking_row_height_inches: 0.20
+  # Reference line and status colour used in site completion displays.
+  daily_completion_target: 0.85
+  action_list_preview_rows: 30
+
+# --- Protocol-deviation and violation monitoring ---------------------------
+# These are automated screening flags, not final adjudications. Each rule can
+# be disabled or reclassified after agreement with the study team.
+protocol_monitoring:
+  rules:
+    cimc_without_enrolment:
+      enabled: true
+      severity: violation
+    missing_programme_start_date:
+      enabled: true
+      severity: violation
+    cimc_before_enrolment:
+      enabled: true
+      severity: deviation
+    duplicate_cimc_participant_date:
+      enabled: true
+      severity: deviation
+    duplicate_enrolment_participant:
+      enabled: true
+      severity: violation
+    enrolment_without_recruitment:
+      enabled: true
+      severity: deviation
+
+# --- Demographic display groupings ------------------------------------------
+demographics:
+  age_group_breaks: [18, 24, 29, 34, 39, 44, 49]
+  age_group_labels: ["18–24", "25–29", "30–34", "35–39", "40–44", "45–49"]
+  exact_age_bin_width: 3
+  exact_age_tick_interval: 5
+  initiation_recency_breaks: [-1, 7, 14, 30, 60, 74]
+  initiation_recency_labels: ["0–7 days", "8–14 days", "15–30 days", "31–60 days", "61–74 days"]
+
+# --- Site-stratified charts --------------------------------------------------
+# Turn an item off to retain only the pooled version of that result.
+site_breakdowns:
+  daily_symptom_prevalence: true
+  monthly_symptom_occurrence: true
+  daily_monthly_consistency: true
+
+# --- Body-map presentation --------------------------------------------------
+bodymap:
+  symmetric_title: "Menstrual pain locations — symmetric limb regions"
+  detailed_title: "Menstrual pain locations — full anatomical detail"
+  # null shows every region; replace with an integer to shorten a result.
+  top_regions_table: null
+  top_regions_timing: null
+
+# --- Menstrual-cycle inference ----------------------------------------------
+# These are analysis assumptions, not clinical diagnoses. Changes should be
+# agreed before comparing outputs across dashboard versions.
+cycle_inference:
+  # FALSE prevents spotting alone from being cycle day 1.
+  spotting_starts_cycle: false
+  # TRUE requires blood on the next consecutive calendar day.
+  require_next_day_blood: true
+  # Confirmed onsets closer than this do not start a new inferred cycle.
+  minimum_days_between_onsets: 20
+  # Longer completed intervals remain included but are flagged for review.
+  long_cycle_review_days: 90
+  # Observed blood-free days required before a new bleeding episode.
+  bleed_free_days_between_episodes: 2
+
+# --- Analysis display windows -----------------------------------------------
+display:
+  programme_months: 6
+  programme_cycles: 3
+  cycle_days: 35
+  cycle_day_tick_interval: 5
+  upset_max_intersections: 10
+  # Visible height of the scrollable full-study participant calendar.
+  full_tracking_scroll_height: "72vh"
+
+# --- Confidence intervals ---------------------------------------------------
+uncertainty:
+  # Whole participants are resampled to preserve repeated records within person.
+  bootstrap_replicates: 500
+  confidence_level: 0.95
+  random_seed: 20260720
+
+# --- Human-readable labels --------------------------------------------------
+labels:
+  sites:
+    wmru: "Wits MRU"
+    profamilia: "Profamilia"
+    ohsu: "OHSU"
+
+# --- Dummy-data generation --------------------------------------------------
+# These settings affect only generate_monitoring_dummy_data.R and have no
+# effect when the dashboard reads real study exports.
+dummy_data:
+  random_seed: 20260825
+  screened_participants: 260
+  monthly_recall_disagreement_probability: 0.10
