@@ -165,7 +165,7 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul class="collapse">
-  <li><a href="#site-action-files" id="toc-site-action-files" class="nav-link active" data-scroll-target="#site-action-files"><span class="header-section-number">3.1</span> Site action files</a></li>
+  <li><a href="#site-action-lists" id="toc-site-action-lists" class="nav-link active" data-scroll-target="#site-action-lists"><span class="header-section-number">3.1</span> Site action lists</a></li>
   <li><a href="#data-quality-and-analysis-checks" id="toc-data-quality-and-analysis-checks" class="nav-link" data-scroll-target="#data-quality-and-analysis-checks"><span class="header-section-number">3.2</span> Data quality and analysis checks</a></li>
   </ul>
 </nav>
@@ -194,7 +194,7 @@ ul.task-list li input[type="checkbox"] {
 
 
 <p>Data are current through 24 August 2026. This page is restricted to Wits MRU and uses the same study-wide configuration, denominators, and alert rules as the central dashboard.</p>
-<p><strong>What it does.</strong> It brings recruitment, daily and monthly completion, individual reporting patterns, follow-up queues, downloads, and data-quality checks into one operational site view.</p>
+<p><strong>What it does.</strong> It brings recruitment, daily and monthly completion, individual reporting patterns, follow-up queues, expandable action lists, and data-quality checks into one operational site view.</p>
 <p><strong>Why it helps.</strong> Site teams can identify and manage their own follow-up problems without filtering the central dashboard or receiving records belonging to another site.</p>
 <div class="monitor-kpis">
   <div class="monitor-kpi">
@@ -457,44 +457,2205 @@ Monthly completion
 </table>
 </div>
 </details>
-<section id="site-action-files" class="level2" data-number="3.1">
-<h2 data-number="3.1" class="anchored" data-anchor-id="site-action-files"><span class="header-section-number">3.1</span> Site action files</h2>
-<div class="monitor-downloads">
-  <div class="monitor-download">
-    <strong>Consecutive missed daily reports</strong>
-    <div class="small text-muted">Current daily reminder targets</div>
-    <a href="reminder_targets_3_consecutive_missed_days_wmru.csv" download="reminder_targets_3_consecutive_missed_days_wmru.csv">Wits MRU</a>
-  </div>
-  <div class="monitor-download">
-    <strong>Overdue monthly sections</strong>
-    <div class="small text-muted">Current monthly reminder targets</div>
-    <a href="monthly_report_due_targets_wmru.csv" download="monthly_report_due_targets_wmru.csv">Wits MRU</a>
-  </div>
-  <div class="monitor-download">
-    <strong>Eligible but not enrolled</strong>
-    <div class="small text-muted">Recruitment follow-up</div>
-    <a href="eligible_not_enrolled_targets_wmru.csv" download="eligible_not_enrolled_targets_wmru.csv">Wits MRU</a>
-  </div>
-  <div class="monitor-download">
-    <strong>Enrolled with no daily report</strong>
-    <div class="small text-muted">Onboarding follow-up</div>
-    <a href="enrolled_no_daily_submission_targets_wmru.csv" download="enrolled_no_daily_submission_targets_wmru.csv">Wits MRU</a>
-  </div>
-  <div class="monitor-download">
-    <strong>Protocol review</strong>
-    <div class="small text-muted">Potential deviations and violations</div>
-    <a href="protocol_deviation_violation_review_wmru.csv" download="protocol_deviation_violation_review_wmru.csv">Wits MRU</a>
-  </div>
-  <div class="monitor-download">
-    <strong>Participant progress</strong>
-    <div class="small text-muted">All enrolled participants at this site</div>
-    <a href="participant_progress_summary_wmru.csv" download="participant_progress_summary_wmru.csv">Wits MRU</a>
-  </div>
-  <div class="monitor-download">
-    <strong>Ranked gap summary</strong>
-    <div class="small text-muted">Full-protocol completion patterns</div>
-    <a href="participant_followup_gap_summary_wmru.csv" download="participant_followup_gap_summary_wmru.csv">Wits MRU</a>
-  </div>
+<section id="site-action-lists" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="site-action-lists"><span class="header-section-number">3.1</span> Site action lists</h2>
+<p>These are operational participant-level worklists for this site. The expandable tables are intended to make the reason for each flag and the expected follow-up clear without requiring a CSV download. The CSV files continue to be generated and routed separately for operational use and audit. In a downloaded Kobo dashboard archive, the site CSVs are stored in the <code>actions/</code> folder; they are not part of the rendered website itself. When action-list publication is enabled, the same records can also be inspected in the expandable tables below.</p>
+<div class="action-list-collection">
+  <details class="dashboard-section action-list-dropdown">
+    <summary>
+      <span>Consecutive missed daily reports</span>
+      <span class="action-list-count">9 records</span>
+    </summary>
+    <div class="action-list-detail">
+      <p>
+        <strong>What this list shows. </strong>
+        Active enrolled participants at this site who currently have at least 3 consecutive due daily reports with no submission. The streak is counted backwards from the latest due day and resets when reporting resumes.
+      </p>
+      <p>
+        <strong>Operational use. </strong>
+        Use this as the current reminder/outreach queue: check whether the participant needs a reminder, technical support, or another documented follow-up action.
+      </p>
+      <p>
+        <strong>Interpretation. </strong>
+        This is a current-action list, not a history of every previous reporting gap. Historical gaps remain visible elsewhere in the dashboard.
+      </p>
+      <p>
+        <strong>CSV file. </strong>
+        The machine-readable version is generated separately as 
+        <code>reminder_targets_3_consecutive_missed_days_wmru.csv</code>
+        . In a downloaded Kobo dashboard archive, find it at 
+        <code>actions/reminder_targets_3_consecutive_missed_days_wmru.csv</code>
+        . It is deliberately kept separate from the rendered website so it can be routed and access-controlled independently.
+      </p>
+    </div>
+    <div class="monitor-table-scroll action-list-table-scroll">
+<table class="table table-sm action-list-table caption-top" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Participant id</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Organization</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Site</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Current consecutive missed days</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Last report date</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Reminder method</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Reminder contact</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Daily completion</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0125</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: left;">2026-07-07</td>
+<td style="text-align: left;">whatsapp</td>
+<td style="text-align: right;">19995550064</td>
+<td style="text-align: right;">0.3409091</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0080</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">2026-08-20</td>
+<td style="text-align: left;">whatsapp</td>
+<td style="text-align: right;">19995550044</td>
+<td style="text-align: right;">0.5909091</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0005</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">whatsapp</td>
+<td style="text-align: right;">19995550003</td>
+<td style="text-align: right;">0.7543860</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0058</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">whatsapp</td>
+<td style="text-align: right;">19995550033</td>
+<td style="text-align: right;">0.7307692</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0086</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">calendar</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0.8333333</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0092</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">calendar</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0.7600000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0111</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">whatsapp</td>
+<td style="text-align: right;">19995550058</td>
+<td style="text-align: right;">0.9024390</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0115</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">calendar</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0.8285714</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0145</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">whatsapp</td>
+<td style="text-align: right;">19995550077</td>
+<td style="text-align: right;">0.2500000</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </details>
+  <details class="dashboard-section action-list-dropdown">
+    <summary>
+      <span>Overdue monthly sections</span>
+      <span class="action-list-count">3 records</span>
+    </summary>
+    <div class="action-list-detail">
+      <p>
+        <strong>What this list shows. </strong>
+        Participant-month sections expected for this site that remain missing after the configured 3-day grace period.
+      </p>
+      <p>
+        <strong>Operational use. </strong>
+        Use this list to chase genuinely overdue monthly reporting and distinguish late forms from months that are not yet due.
+      </p>
+      <p>
+        <strong>Interpretation. </strong>
+        A row indicates an outstanding reporting requirement; it does not by itself imply a protocol deviation.
+      </p>
+      <p>
+        <strong>CSV file. </strong>
+        The machine-readable version is generated separately as 
+        <code>monthly_report_due_targets_wmru.csv</code>
+        . In a downloaded Kobo dashboard archive, find it at 
+        <code>actions/monthly_report_due_targets_wmru.csv</code>
+        . It is deliberately kept separate from the rendered website so it can be routed and access-controlled independently.
+      </p>
+    </div>
+    <div class="monitor-table-scroll action-list-table-scroll">
+<table class="table table-sm action-list-table caption-top" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Participant id</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Organization</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Site</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Expected monthly reports</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Monthly reports received</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Monthly reports missing</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Last monthly report due</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Reminder method</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Reminder contact</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0253</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">2026-08-01</td>
+<td style="text-align: left;">calendar</td>
+<td style="text-align: right;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0068</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">2026-08-01</td>
+<td style="text-align: left;">calendar</td>
+<td style="text-align: right;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0125</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">2026-08-01</td>
+<td style="text-align: left;">whatsapp</td>
+<td style="text-align: right;">19995550064</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </details>
+  <details class="dashboard-section action-list-dropdown">
+    <summary>
+      <span>Eligible but not enrolled</span>
+      <span class="action-list-count">9 records</span>
+    </summary>
+    <div class="action-list-detail">
+      <p>
+        <strong>What this list shows. </strong>
+        Recruitment/screening records marked eligible that still have no matching enrollment record after 7 days.
+      </p>
+      <p>
+        <strong>Operational use. </strong>
+        Use this as a recruitment follow-up queue to determine whether enrollment is pending, the participant declined, the linkage is missing, or another disposition needs to be recorded.
+      </p>
+      <p>
+        <strong>Interpretation. </strong>
+        Absence of an enrollment record is an operational flag and should be checked against source records before being interpreted as an error.
+      </p>
+      <p>
+        <strong>CSV file. </strong>
+        The machine-readable version is generated separately as 
+        <code>eligible_not_enrolled_targets_wmru.csv</code>
+        . In a downloaded Kobo dashboard archive, find it at 
+        <code>actions/eligible_not_enrolled_targets_wmru.csv</code>
+        . It is deliberately kept separate from the rendered website so it can be routed and access-controlled independently.
+      </p>
+    </div>
+    <div class="monitor-table-scroll action-list-table-scroll">
+<table class="table table-sm action-list-table caption-top" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Participant id</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Organization</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Site</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Recruitment date</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Days since recruitment</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Planned enrollment date</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Phone</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Email</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Reminder</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0001</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-27</td>
+<td style="text-align: right;">89</td>
+<td style="text-align: left;">2026-06-09</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0141</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-16</td>
+<td style="text-align: right;">69</td>
+<td style="text-align: left;">2026-06-19</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0221</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-01</td>
+<td style="text-align: right;">54</td>
+<td style="text-align: left;">2026-07-10</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0180</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-13</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: left;">2026-07-15</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0084</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-25</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: left;">2026-08-03</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0220</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-26</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: left;">2026-07-28</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0257</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-12</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: left;">2026-08-16</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0146</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-16</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">2026-08-30</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0163</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-16</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">2026-08-20</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </details>
+  <details class="dashboard-section action-list-dropdown">
+    <summary>
+      <span>Enrolled with no daily report</span>
+      <span class="action-list-count">1 record</span>
+    </summary>
+    <div class="action-list-detail">
+      <p>
+        <strong>What this list shows. </strong>
+        Enrolled participants for whom no daily CIMC/ePRO submission has appeared after the configured 2-day onboarding interval.
+      </p>
+      <p>
+        <strong>Operational use. </strong>
+        Use this for early onboarding follow-up: confirm that the participant can access the reporting system, understands the daily schedule, and that their submissions are linking to the correct participant ID.
+      </p>
+      <p>
+        <strong>Interpretation. </strong>
+        This is intended to identify failure to start reporting promptly, rather than later gaps after reporting has already begun.
+      </p>
+      <p>
+        <strong>CSV file. </strong>
+        The machine-readable version is generated separately as 
+        <code>enrolled_no_daily_submission_targets_wmru.csv</code>
+        . In a downloaded Kobo dashboard archive, find it at 
+        <code>actions/enrolled_no_daily_submission_targets_wmru.csv</code>
+        . It is deliberately kept separate from the rendered website so it can be routed and access-controlled independently.
+      </p>
+    </div>
+    <div class="monitor-table-scroll action-list-table-scroll">
+<table class="table table-sm action-list-table caption-top" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Participant id</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Organization</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Site</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Enrollment date</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Days since enrollment</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Daily reminder method</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Phone</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Email</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0068</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-09</td>
+<td style="text-align: right;">46</td>
+<td style="text-align: left;">calendar</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </details>
+  <details class="dashboard-section action-list-dropdown">
+    <summary>
+      <span>Protocol review</span>
+      <span class="action-list-count">0 records</span>
+    </summary>
+    <div class="action-list-detail">
+      <p>
+        <strong>What this list shows. </strong>
+        Automated cross-form flags that may represent protocol deviations, protocol violations, or data/linkage problems. The rules compare recruitment, enrollment and CIMC records and apply the classifications configured for the study.
+      </p>
+      <p>
+        <strong>Operational use. </strong>
+        Use this list for source verification and formal study-team adjudication. Confirm the underlying records, decide whether the event is genuinely a deviation/violation, and document the required action under the approved procedures.
+      </p>
+      <p>
+        <strong>Interpretation. </strong>
+        These are screening flags only. The dashboard does not make the final determination of seriousness, causality, reportability, or corrective action.
+      </p>
+      <p>
+        <strong>CSV file. </strong>
+        The machine-readable version is generated separately as 
+        <code>protocol_deviation_violation_review_wmru.csv</code>
+        . In a downloaded Kobo dashboard archive, find it at 
+        <code>actions/protocol_deviation_violation_review_wmru.csv</code>
+        . It is deliberately kept separate from the rendered website so it can be routed and access-controlled independently.
+      </p>
+    </div>
+    <p class="small text-muted">No records currently meet this rule.</p>
+  </details>
+  <details class="dashboard-section action-list-dropdown">
+    <summary>
+      <span>Participant progress</span>
+      <span class="action-list-count">48 records</span>
+    </summary>
+    <div class="action-list-detail">
+      <p>
+        <strong>What this list shows. </strong>
+        One operational summary row for every enrolled participant at this site, combining follow-up timing, expected and received reporting, completion measures, and current status fields.
+      </p>
+      <p>
+        <strong>Operational use. </strong>
+        Use this as the site's broad participant-management table when you need the whole enrolled cohort rather than only people who have triggered a specific exception rule.
+      </p>
+      <p>
+        <strong>Interpretation. </strong>
+        Because this is a complete participant-level operational file, access should follow the same confidentiality controls as the other protected action files.
+      </p>
+      <p>
+        <strong>CSV file. </strong>
+        The machine-readable version is generated separately as 
+        <code>participant_progress_summary_wmru.csv</code>
+        . In a downloaded Kobo dashboard archive, find it at 
+        <code>actions/participant_progress_summary_wmru.csv</code>
+        . It is deliberately kept separate from the rendered website so it can be routed and access-controlled independently.
+      </p>
+    </div>
+    <div class="monitor-table-scroll action-list-table-scroll">
+<table class="table table-sm action-list-table caption-top" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Participant id</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Organization</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Site</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Enrollment date</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Planned end date</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Status</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Daily reports received</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Expected daily reports</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Daily completion</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Monthly reports received</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Expected monthly reports</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Monthly completion</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Current consecutive missed days</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Last report date</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Method stop date</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0005</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-29</td>
+<td style="text-align: left;">2026-09-26</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">43</td>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">0.7543860</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0006</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-09</td>
+<td style="text-align: left;">2026-09-06</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: right;">77</td>
+<td style="text-align: right;">0.5454545</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0014</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-22</td>
+<td style="text-align: left;">2026-10-19</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">0.8235294</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0015</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-18</td>
+<td style="text-align: left;">2026-11-15</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0.8571429</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0017</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-22</td>
+<td style="text-align: left;">2026-09-19</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">0.9218750</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0023</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-22</td>
+<td style="text-align: left;">2026-09-19</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">0.7031250</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0025</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-21</td>
+<td style="text-align: left;">2026-09-18</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">0.7384615</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0030</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-22</td>
+<td style="text-align: left;">2026-10-19</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0040</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-02</td>
+<td style="text-align: left;">2026-08-30</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">74</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">0.8809524</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0045</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-13</td>
+<td style="text-align: left;">2026-11-10</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">0.9166667</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0046</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-02</td>
+<td style="text-align: left;">2026-10-30</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">0.9565217</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0057</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-23</td>
+<td style="text-align: left;">2026-09-20</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">63</td>
+<td style="text-align: right;">0.7142857</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">2026-08-22</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0058</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-30</td>
+<td style="text-align: left;">2026-10-27</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">0.7307692</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0064</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-09</td>
+<td style="text-align: left;">2026-09-06</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">77</td>
+<td style="text-align: right;">0.7792208</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0068</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-09</td>
+<td style="text-align: left;">2026-10-06</td>
+<td style="text-align: left;">Enrolled — no daily report</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0077</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">2026-11-21</td>
+<td style="text-align: left;">Enrolled — no daily report</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">NA</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0078</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-25</td>
+<td style="text-align: left;">2026-08-22</td>
+<td style="text-align: left;">Reached day 90</td>
+<td style="text-align: right;">76</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">0.8444444</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-22</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0080</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-12</td>
+<td style="text-align: left;">2026-10-09</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: right;">0.5909091</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">2026-08-20</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0086</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-01</td>
+<td style="text-align: left;">2026-10-29</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">0.8333333</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0092</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-31</td>
+<td style="text-align: left;">2026-10-28</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">0.7600000</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0109</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-16</td>
+<td style="text-align: left;">2026-09-13</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">61</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">0.8714286</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0111</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-15</td>
+<td style="text-align: left;">2026-10-12</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;">41</td>
+<td style="text-align: right;">0.9024390</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0115</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-21</td>
+<td style="text-align: left;">2026-10-18</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">0.8285714</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0125</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-29</td>
+<td style="text-align: left;">2026-08-26</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">88</td>
+<td style="text-align: right;">0.3409091</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0.6666667</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: left;">2026-07-07</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0131</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-05</td>
+<td style="text-align: left;">2026-10-02</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">51</td>
+<td style="text-align: right;">0.9215686</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0135</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-10</td>
+<td style="text-align: left;">2026-11-07</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">0.7333333</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0144</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-23</td>
+<td style="text-align: left;">2026-08-20</td>
+<td style="text-align: left;">Reached day 90</td>
+<td style="text-align: right;">76</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">0.8444444</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">2026-08-19</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0145</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">2026-11-18</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0.2500000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0148</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-20</td>
+<td style="text-align: left;">2026-10-17</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">0.7777778</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0156</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-25</td>
+<td style="text-align: left;">2026-09-22</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">61</td>
+<td style="text-align: right;">0.7704918</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0175</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">2026-11-21</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0176</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-13</td>
+<td style="text-align: left;">2026-11-10</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">0.5000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0181</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-04</td>
+<td style="text-align: left;">2026-10-01</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">52</td>
+<td style="text-align: right;">0.9615385</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0184</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-30</td>
+<td style="text-align: left;">2026-10-27</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">0.8846154</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0190</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">2026-11-20</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0193</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-10</td>
+<td style="text-align: left;">2026-10-07</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">0.7826087</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0194</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">2026-11-20</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.5000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0199</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-09</td>
+<td style="text-align: left;">2026-11-06</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">0.8750000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0203</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-09</td>
+<td style="text-align: left;">2026-10-06</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">41</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">0.8723404</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0208</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-11</td>
+<td style="text-align: left;">2026-09-08</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">0.8000000</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0212</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">2026-11-18</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0218</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-27</td>
+<td style="text-align: left;">2026-09-24</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">0.8474576</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0241</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-07</td>
+<td style="text-align: left;">2026-11-04</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">0.7777778</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0245</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">2026-11-21</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0249</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-16</td>
+<td style="text-align: left;">2026-09-13</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">0.8571429</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1.0000000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0250</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-09</td>
+<td style="text-align: left;">2026-11-06</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">0.8125000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0251</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">2026-11-18</td>
+<td style="text-align: left;">Active follow-up</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0.7500000</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">NA</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">NA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0253</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-22</td>
+<td style="text-align: left;">2026-08-19</td>
+<td style="text-align: left;">Reached day 90</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">0.2222222</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0.3333333</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: left;">2026-06-21</td>
+<td style="text-align: left;">NA</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </details>
+  <details class="dashboard-section action-list-dropdown">
+    <summary>
+      <span>Ranked gap summary</span>
+      <span class="action-list-count">48 records</span>
+    </summary>
+    <div class="action-list-detail">
+      <p>
+        <strong>What this list shows. </strong>
+        A participant-level summary of reporting gaps and completion across the full observed protocol period, ranked so the largest or most persistent follow-up gaps rise to the top.
+      </p>
+      <p>
+        <strong>Operational use. </strong>
+        Use this to prioritise participants who may need broader follow-up because of repeated or extended missingness, even when they are not currently in a consecutive-miss streak.
+      </p>
+      <p>
+        <strong>Interpretation. </strong>
+        Unlike the current reminder queue, this deliberately captures historical completion patterns across follow-up.
+      </p>
+      <p>
+        <strong>CSV file. </strong>
+        The machine-readable version is generated separately as 
+        <code>participant_followup_gap_summary_wmru.csv</code>
+        . In a downloaded Kobo dashboard archive, find it at 
+        <code>actions/participant_followup_gap_summary_wmru.csv</code>
+        . It is deliberately kept separate from the rendered website so it can be routed and access-controlled independently.
+      </p>
+    </div>
+    <div class="monitor-table-scroll action-list-table-scroll">
+<table class="table table-sm action-list-table caption-top" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th">Participant id</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Organization</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Site</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Enrollment date</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Planned end date</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">Observed end date</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Observed days</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Daily received</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Missed days</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Gap episodes</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Longest gap</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Monthly due</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Monthly received</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Monthly missed</th>
+<th style="text-align: right;" data-quarto-table-cell-role="th">Current completion</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0006</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-09</td>
+<td style="text-align: left;">2026-09-06</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">77</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.5454545</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0023</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-22</td>
+<td style="text-align: left;">2026-09-19</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7031250</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0208</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-11</td>
+<td style="text-align: left;">2026-09-08</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8000000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0064</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-09</td>
+<td style="text-align: left;">2026-09-06</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">77</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7792208</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0156</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-25</td>
+<td style="text-align: left;">2026-09-22</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">61</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7704918</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0057</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-23</td>
+<td style="text-align: left;">2026-09-20</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">63</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7142857</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0144</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-23</td>
+<td style="text-align: left;">2026-08-20</td>
+<td style="text-align: left;">2026-08-20</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">76</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8444444</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0078</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-25</td>
+<td style="text-align: left;">2026-08-22</td>
+<td style="text-align: left;">2026-08-22</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">76</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8444444</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0025</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-21</td>
+<td style="text-align: left;">2026-09-18</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7384615</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0005</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-29</td>
+<td style="text-align: left;">2026-09-26</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">57</td>
+<td style="text-align: right;">43</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7543860</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0125</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-29</td>
+<td style="text-align: left;">2026-08-26</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">88</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">58</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">48</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.3409091</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0040</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-02</td>
+<td style="text-align: left;">2026-08-30</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">84</td>
+<td style="text-align: right;">74</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8809524</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0253</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-05-22</td>
+<td style="text-align: left;">2026-08-19</td>
+<td style="text-align: left;">2026-08-19</td>
+<td style="text-align: right;">90</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.2222222</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0080</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-12</td>
+<td style="text-align: left;">2026-10-09</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.5909091</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0109</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-16</td>
+<td style="text-align: left;">2026-09-13</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">61</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8714286</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0193</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-10</td>
+<td style="text-align: left;">2026-10-07</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">46</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7826087</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0249</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-16</td>
+<td style="text-align: left;">2026-09-13</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">70</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8571429</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0218</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-27</td>
+<td style="text-align: left;">2026-09-24</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8474576</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0148</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-20</td>
+<td style="text-align: left;">2026-10-17</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">36</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7777778</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0058</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-30</td>
+<td style="text-align: left;">2026-10-27</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7307692</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0014</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-22</td>
+<td style="text-align: left;">2026-10-19</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8235294</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0203</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-09</td>
+<td style="text-align: left;">2026-10-06</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">41</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8723404</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0017</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-06-22</td>
+<td style="text-align: left;">2026-09-19</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">64</td>
+<td style="text-align: right;">59</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.9218750</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0092</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-31</td>
+<td style="text-align: left;">2026-10-28</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7600000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0176</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-13</td>
+<td style="text-align: left;">2026-11-10</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.5000000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0131</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-05</td>
+<td style="text-align: left;">2026-10-02</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">51</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.9215686</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0135</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-10</td>
+<td style="text-align: left;">2026-11-07</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7333333</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0115</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-21</td>
+<td style="text-align: left;">2026-10-18</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8285714</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0241</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-07</td>
+<td style="text-align: left;">2026-11-04</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7777778</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0184</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-30</td>
+<td style="text-align: left;">2026-10-27</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">26</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8846154</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0086</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-01</td>
+<td style="text-align: left;">2026-10-29</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8333333</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0111</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-15</td>
+<td style="text-align: left;">2026-10-12</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">41</td>
+<td style="text-align: right;">37</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.9024390</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0250</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-09</td>
+<td style="text-align: left;">2026-11-06</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8125000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0181</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-04</td>
+<td style="text-align: left;">2026-10-01</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">52</td>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.9615385</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0199</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-09</td>
+<td style="text-align: left;">2026-11-06</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8750000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0068</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-09</td>
+<td style="text-align: left;">2026-10-06</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0145</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">2026-11-18</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.2500000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0015</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-18</td>
+<td style="text-align: left;">2026-11-15</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.8571429</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0045</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-13</td>
+<td style="text-align: left;">2026-11-10</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.9166667</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0046</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-02</td>
+<td style="text-align: left;">2026-10-30</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.9565217</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0077</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">2026-11-21</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.0000000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0194</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">2026-11-20</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.5000000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0251</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">2026-11-18</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.7500000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0030</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-07-22</td>
+<td style="text-align: left;">2026-10-19</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.0000000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0175</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">2026-11-21</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.0000000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0190</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-23</td>
+<td style="text-align: left;">2026-11-20</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.0000000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">01-CIMC-0212</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-21</td>
+<td style="text-align: left;">2026-11-18</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.0000000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">01-CIMC-0245</td>
+<td style="text-align: left;">wmru</td>
+<td style="text-align: left;">Wits MRU</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: left;">2026-11-21</td>
+<td style="text-align: left;">2026-08-24</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.0000000</td>
+</tr>
+</tbody>
+</table>
+</div>
+  </details>
 </div>
 </section>
 <section id="data-quality-and-analysis-checks" class="level2" data-number="3.2">

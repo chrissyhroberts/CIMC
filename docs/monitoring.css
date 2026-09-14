@@ -179,3 +179,42 @@ main.content table tbody tr:hover td {
 @media (max-width: 650px) {
   .monitor-kpi-value { font-size: 1.3rem; }
 }
+
+/* Expandable action-list tables. CSV files remain separate operational outputs;
+   these controls provide an in-dashboard view when publication is enabled. */
+.action-list-collection {
+  margin: .8rem 0 1.2rem;
+}
+
+.action-list-dropdown > summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.action-list-count {
+  color: var(--bs-secondary-color);
+  font-size: .86rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.action-list-detail {
+  margin: .45rem 0 .7rem;
+}
+
+.action-list-table-scroll {
+  max-height: 32rem;
+  overflow: auto;
+}
+
+.action-list-table {
+  font-size: .86rem;
+  min-width: 760px;
+}
+
+.action-list-table th,
+.action-list-table td {
+  white-space: nowrap;
+}
