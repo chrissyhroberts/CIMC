@@ -1,5 +1,0 @@
-participant_id,organization,site,enrollment_date,days_since_enrollment,daily_reminder_method,phone,email
-02-CIMC-0007,profamilia,Profamilia,2026-06-09,76,calendar,,
-01-CIMC-0068,wmru,Wits MRU,2026-07-09,46,calendar,,
-02-CIMC-0047,profamilia,Profamilia,2026-07-25,30,calendar,,
-03-CIMC-0152,ohsu,OHSU,2026-07-27,28,email,,cimc.0079@example.org

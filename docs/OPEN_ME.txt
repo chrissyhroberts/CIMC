@@ -1,0 +1,3 @@
+CIMC — OHSU archive
+Open index.html in a browser for the complete study dashboard.
+Audience-authorised CSV action reports are in actions/.

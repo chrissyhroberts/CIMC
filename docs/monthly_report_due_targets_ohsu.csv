@@ -1,2 +1,0 @@
-participant_id,organization,site,expected_monthly_reports,monthly_reports_received,monthly_reports_missing,last_monthly_report_due,reminder_method,reminder_contact
-03-CIMC-0152,ohsu,OHSU,1,0,1,2026-08-01,whatsapp,
